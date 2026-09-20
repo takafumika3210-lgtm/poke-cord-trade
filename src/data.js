@@ -1,4 +1,4 @@
-﻿// ポケモンカード投資・需給データセット
+﻿// ポケモンカード投資・需給＆PSAグレーディングデータセット
 export const INITIAL_CARDS = [
   {
     id: "card-001",
@@ -8,8 +8,18 @@ export const INITIAL_CARDS = [
     releaseYear: 2017,
     grade: "PSA10",
     imageUrl: "https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=500&auto=format&fit=crop&q=60",
+    // PSA10購入相場
     ebayPriceUsd: 5800,
     ebayShippingUsd: 45,
+    // 素体（Raw/NM）購入相場 (eBay)
+    rawPriceUsd: 2200,
+    rawShippingUsd: 30,
+    // 国内グレード別相場
+    rawPriceJpy: 380000,
+    psa9PriceJpy: 550000,
+    psa10PriceJpy: 1100000,
+    psa10GemRate: 0.65, // サン&ムーン初期特有の裏面カケのためPSA10率は約65%
+    gradingFeeJpy: 5500, // 高額カード追加保険料込み
     ebaySellerRating: "99.8%",
     ebayItemLocation: "United States (California)",
     snkrdunkPriceJpy: 1100000,
@@ -17,8 +27,8 @@ export const INITIAL_CARDS = [
     mercariAvgPriceJpy: 1080000,
     yahooAvgPriceJpy: 1060000,
     demandScore: 94,
-    liquiditySpeedDays: 4.2, // 平均回転日数
-    priceTrend30d: +8.5, // 30日価格変動率(%)
+    liquiditySpeedDays: 4.2,
+    priceTrend30d: +8.5,
     snkrdunkHistory: [
       { date: "2026-08-20", price: 980000, volume: 3 },
       { date: "2026-08-27", price: 1010000, volume: 4 },
@@ -36,14 +46,15 @@ export const INITIAL_CARDS = [
     mercariSoldExamples: [
       { date: "2026-09-17", price: 1120000, condition: "PSA10最高評価・暗所保管・即日発送", title: "【PSA10】がんばリーリエ SR GXバトルブースト 正規品" },
       { date: "2026-09-12", price: 1080000, condition: "PSA10 連番個体・鑑定証明QR確認済", title: "がんばリーリエ PSA10 SR 鑑定品" },
-      { date: "2026-09-05", price: 1050000, condition: "PSA10 専用スリーブ&ローダー付き", title: "ポケモンカード がんばリーリエ SR PSA10" }
+      { date: "2026-09-05", price: 550000, condition: "PSA9 美品・防湿庫保管", title: "がんばリーリエ SR PSA9 準最高評価" },
+      { date: "2026-08-28", price: 390000, condition: "素体 表面極美品・白かけ微小", title: "がんばリーリエ SR 本物 素体" }
     ],
     yahooSoldExamples: [
       { date: "2026-09-16", price: 1090000, condition: "PSA10 極美品・クーポン利用成約", title: "PSA10 がんばリーリエ SR サン&ムーン" },
-      { date: "2026-09-08", price: 1060000, condition: "PSA10 横線なし・防湿庫管理", title: "がんばリーリエ SR PSA10 ポケカ" }
+      { date: "2026-09-08", price: 540000, condition: "PSA9 センタリング良好", title: "がんばリーリエ SR PSA9 ポケカ" }
     ],
-    tags: ["PSA10", "超高需要", "海外仕入れ優位", "殿堂入り人気"],
-    notes: "海外コレクターからのeBay出品が多く、円高局面やドル安オークション終了時に割安で仕入れ可能。国内スニダン・ヤフーフリマでの成約スピードは極めて速い。"
+    tags: ["PSA10", "PSA鑑定大化け候補", "殿堂入り人気", "海外仕入れ優位"],
+    notes: "海外eBayで未鑑定素体（Raw $2,200 ≒ 約35万円）を仕入れてPSA10を取得できれば、国内110万円で約60万円以上の純利を生むウルトラアップサイド銘柄。PSA9でも黒字化しやすい。"
   },
   {
     id: "card-002",
@@ -55,13 +66,20 @@ export const INITIAL_CARDS = [
     imageUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=60",
     ebayPriceUsd: 780,
     ebayShippingUsd: 28,
+    rawPriceUsd: 360,
+    rawShippingUsd: 20,
+    rawPriceJpy: 62000,
+    psa9PriceJpy: 85000,
+    psa10PriceJpy: 168000,
+    psa10GemRate: 0.82, // 近代パックのためPSA10取得率は約82%と高い
+    gradingFeeJpy: 3500,
     ebaySellerRating: "100%",
     ebayItemLocation: "United States (Texas)",
     snkrdunkPriceJpy: 168000,
     torecaJapanPriceJpy: 160000,
     mercariAvgPriceJpy: 165000,
     yahooAvgPriceJpy: 163000,
-    demandScore: 89,
+    demandScore: 92,
     liquiditySpeedDays: 2.8,
     priceTrend30d: +4.2,
     snkrdunkHistory: [
@@ -80,58 +98,66 @@ export const INITIAL_CARDS = [
     ],
     mercariSoldExamples: [
       { date: "2026-09-18", price: 168000, condition: "PSA10 完全美品・白かけなし", title: "【最安値】ナンジャモ SAR PSA10 クレイバースト" },
-      { date: "2026-09-15", price: 165000, condition: "PSA10 厳選個体・ワンオーナー", title: "ナンジャモ SAR PSA10 クレイバースト 096/071" },
-      { date: "2026-09-11", price: 162000, condition: "PSA10 鑑定ケース保護フィルム付", title: "ナンジャモ SAR クレイバースト PSA10" }
+      { date: "2026-09-14", price: 86000, condition: "PSA9 美品", title: "ナンジャモ SAR PSA9 クレイバースト" },
+      { date: "2026-09-11", price: 63000, condition: "素体 完美品 ローダー付き", title: "ナンジャモ SAR 素体 美品" }
     ],
     yahooSoldExamples: [
       { date: "2026-09-17", price: 166000, condition: "PSA10 クーポン利用・即決", title: "ナンジャモ SAR PSA10 クレイバースト SV2D" },
-      { date: "2026-09-10", price: 164000, condition: "PSA10 防湿庫保管品", title: "ナンジャモ SAR PSA10 ポケモンカード" }
+      { date: "2026-09-10", price: 84000, condition: "PSA9 準美品", title: "ナンジャモ SAR PSA9" }
     ],
-    tags: ["PSA10", "高回転", "近代人気SAR", "価格安定"],
-    notes: "回転率が抜群で1週間以内に成約しやすい。eBayでの出品数が豊富で、複数まとめ買い交渉による送料削減が狙える。"
+    tags: ["PSA10", "高回転", "PSA10取得率高(82%)", "近代人気SAR"],
+    notes: "近代カード特有のセンタリングの良さからPSA10取得率が高い（約82%）。素体約5.8万円仕入れ＋鑑定料3,500円 ➔ PSA10化で16.8万円（純利益+8〜9万円）が期待できる高勝率銘柄。"
   },
   {
     id: "card-003",
-    name: "リザードン 25th プロモ",
-    cardSet: "25th ANNIVERSARY COLLECTION プロモパック",
-    cardNumber: "001/025 PROMO",
-    releaseYear: 2021,
-    grade: "PSA10",
-    imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&auto=format&fit=crop&q=60",
-    ebayPriceUsd: 260,
-    ebayShippingUsd: 22,
-    ebaySellerRating: "99.5%",
-    ebayItemLocation: "United Kingdom (London)",
-    snkrdunkPriceJpy: 62000,
-    torecaJapanPriceJpy: 59000,
-    mercariAvgPriceJpy: 61000,
-    yahooAvgPriceJpy: 59800,
-    demandScore: 86,
-    liquiditySpeedDays: 3.5,
-    priceTrend30d: +3.1,
+    name: "ゲンガー&ミミッキュGX (SA / SR)",
+    cardSet: "拡張パック タッグボルト",
+    cardNumber: "103/095 SR",
+    releaseYear: 2018,
+    grade: "Raw (未鑑定/NM)",
+    imageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=60",
+    ebayPriceUsd: 1100, // PSA10相場
+    ebayShippingUsd: 35,
+    rawPriceUsd: 420, // 素体eBay相場
+    rawShippingUsd: 25,
+    rawPriceJpy: 72000,
+    psa9PriceJpy: 95000,
+    psa10PriceJpy: 225000,
+    psa10GemRate: 0.70,
+    gradingFeeJpy: 3500,
+    ebaySellerRating: "99.7%",
+    ebayItemLocation: "Australia (Sydney)",
+    snkrdunkPriceJpy: 225000,
+    torecaJapanPriceJpy: 210000,
+    mercariAvgPriceJpy: 220000,
+    yahooAvgPriceJpy: 218000,
+    demandScore: 91,
+    liquiditySpeedDays: 3.2,
+    priceTrend30d: +15.4,
     snkrdunkHistory: [
-      { date: "2026-08-20", price: 56000, volume: 15 },
-      { date: "2026-08-27", price: 58000, volume: 17 },
-      { date: "2026-09-03", price: 59000, volume: 19 },
-      { date: "2026-09-10", price: 61000, volume: 22 },
-      { date: "2026-09-18", price: 62000, volume: 20 }
+      { date: "2026-08-20", price: 180000, volume: 8 },
+      { date: "2026-08-27", price: 190000, volume: 10 },
+      { date: "2026-09-03", price: 205000, volume: 12 },
+      { date: "2026-09-10", price: 215000, volume: 15 },
+      { date: "2026-09-18", price: 225000, volume: 14 }
     ],
     torecaJapanHistory: [
-      { date: "2026-08-20", buyPrice: 48000, sellPrice: 57000 },
-      { date: "2026-08-27", buyPrice: 50000, sellPrice: 59000 },
-      { date: "2026-09-03", buyPrice: 51000, sellPrice: 60000 },
-      { date: "2026-09-10", buyPrice: 53000, sellPrice: 62000 },
-      { date: "2026-09-18", buyPrice: 53000, sellPrice: 59000 }
+      { date: "2026-08-20", buyPrice: 150000, sellPrice: 190000 },
+      { date: "2026-08-27", buyPrice: 160000, sellPrice: 200000 },
+      { date: "2026-09-03", buyPrice: 175000, sellPrice: 215000 },
+      { date: "2026-09-10", buyPrice: 185000, sellPrice: 225000 },
+      { date: "2026-09-18", buyPrice: 185000, sellPrice: 215000 }
     ],
     mercariSoldExamples: [
-      { date: "2026-09-18", price: 62500, condition: "PSA10 美品・即購入OK", title: "リザードン 25th プロモ PSA10 001/025" },
-      { date: "2026-09-14", price: 61000, condition: "PSA10 鑑定品・防湿庫保管", title: "【PSA10】25周年 リザードン プロモ" }
+      { date: "2026-09-18", price: 225000, condition: "PSA10 連番・完全美品", title: "【PSA10】ゲンガー&ミミッキュGX SA SR タッグボルト" },
+      { date: "2026-09-12", price: 98000, condition: "PSA9 美品", title: "ゲンガー&ミミッキュGX SA PSA9" },
+      { date: "2026-09-08", price: 74000, condition: "素体 センタリング良好・PSA提出用", title: "ゲンガー&ミミッキュGX SA SR 素体" }
     ],
     yahooSoldExamples: [
-      { date: "2026-09-16", price: 60500, condition: "PSA10 送料無料", title: "リザードン 25th ANNIVERSARY PROMO PSA10" }
+      { date: "2026-09-15", price: 220000, condition: "PSA10 美品・即日発送", title: "タッグボルト ゲンガー&ミミッキュGX SA PSA10" }
     ],
-    tags: ["PSA10", "定番人気", "リザードン", "低仕入れ単価"],
-    notes: "海外での25thコレクションの流通量が多く、eBay仕入れの価格優位性が高い。ヤフーフリマの手数料5%を活用すると手取り純利を最大化できる。"
+    tags: ["Raw", "PSA鑑定イチオシ", "タッグチームSA", "アップサイド3倍"],
+    notes: "現在PSA10相場が22.5万円まで急騰。海外eBayでは素体が$420（約6.7万円）で入手可能。鑑定料3,500円を足しても約7.1万円の原価。PSA10化できれば粗利+13万円、PSA9でも手取り9万円で元本回収できる鉄板銘柄。"
   },
   {
     id: "card-004",
@@ -143,13 +169,20 @@ export const INITIAL_CARDS = [
     imageUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500&auto=format&fit=crop&q=60",
     ebayPriceUsd: 3900,
     ebayShippingUsd: 50,
+    rawPriceUsd: 1500,
+    rawShippingUsd: 35,
+    rawPriceJpy: 260000,
+    psa9PriceJpy: 420000,
+    psa10PriceJpy: 850000,
+    psa10GemRate: 0.60,
+    gradingFeeJpy: 4500,
     ebaySellerRating: "100%",
     ebayItemLocation: "Canada (Ontario)",
     snkrdunkPriceJpy: 850000,
     torecaJapanPriceJpy: 820000,
     mercariAvgPriceJpy: 840000,
     yahooAvgPriceJpy: 830000,
-    demandScore: 91,
+    demandScore: 93,
     liquiditySpeedDays: 5.1,
     priceTrend30d: +12.3,
     snkrdunkHistory: [
@@ -168,102 +201,16 @@ export const INITIAL_CARDS = [
     ],
     mercariSoldExamples: [
       { date: "2026-09-16", price: 860000, condition: "PSA10 センタリング良好・極上美品", title: "【PSA10】メガリザードンY ポンチョを着たピカチュウ プロモ" },
-      { date: "2026-09-07", price: 830000, condition: "PSA10 厳重梱包・保険付配送", title: "ポンチョを着たピカチュウ リザードンY 208/XY-P PSA10" }
+      { date: "2026-09-07", price: 420000, condition: "PSA9 美品・防湿庫保管", title: "ポンチョを着たピカチュウ リザードンY PSA9" }
     ],
     yahooSoldExamples: [
       { date: "2026-09-15", price: 845000, condition: "PSA10 コレクション放出品", title: "PSA10 メガリザードンY ポンチョを着たピカチュウ" }
     ],
-    tags: ["PSA10", "高騰トレンド", "希少プロモ", "高単価利益"],
-    notes: "絶版プロモのため世界的に供給が限定的。スニダンの取引相場が継続上昇トレンドにあり、eBayで即決購入できれば一撃で10万〜20万円規模の利ざやが狙える。"
+    tags: ["PSA10", "高騰トレンド", "希少プロモ", "PSA10化爆益"],
+    notes: "絶版プロモのため世界的人気。素体美品（約25万円）からPSA10（85万円）へのグレードアップ差益は60万円近い。万が一PSA9（42万円）になっても十分な利益が残る安全設計。"
   },
   {
     id: "card-005",
-    name: "ルチア (SR)",
-    cardSet: "強化拡張パック 裂空のカリスマ",
-    cardNumber: "104/096 SR",
-    releaseYear: 2018,
-    grade: "PSA10",
-    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60",
-    ebayPriceUsd: 2950,
-    ebayShippingUsd: 38,
-    ebaySellerRating: "99.2%",
-    ebayItemLocation: "United States (Florida)",
-    snkrdunkPriceJpy: 640000,
-    torecaJapanPriceJpy: 620000,
-    mercariAvgPriceJpy: 635000,
-    yahooAvgPriceJpy: 625000,
-    demandScore: 88,
-    liquiditySpeedDays: 4.8,
-    priceTrend30d: +6.7,
-    snkrdunkHistory: [
-      { date: "2026-08-20", price: 580000, volume: 4 },
-      { date: "2026-08-27", price: 600000, volume: 5 },
-      { date: "2026-09-03", price: 615000, volume: 6 },
-      { date: "2026-09-10", price: 630000, volume: 7 },
-      { date: "2026-09-18", price: 640000, volume: 6 }
-    ],
-    torecaJapanHistory: [
-      { date: "2026-08-20", buyPrice: 500000, sellPrice: 590000 },
-      { date: "2026-08-27", buyPrice: 520000, sellPrice: 610000 },
-      { date: "2026-09-03", buyPrice: 540000, sellPrice: 630000 },
-      { date: "2026-09-10", buyPrice: 560000, sellPrice: 645000 },
-      { date: "2026-09-18", buyPrice: 560000, sellPrice: 620000 }
-    ],
-    mercariSoldExamples: [
-      { date: "2026-09-17", price: 648000, condition: "PSA10 白かけ凹みなし・ホロ欠けなし", title: "【PSA10】ルチア SR 裂空のカリスマ 完美品" },
-      { date: "2026-09-09", price: 630000, condition: "PSA10 暗所防湿庫保管", title: "ルチア SR PSA10 ポケモンカード" }
-    ],
-    yahooSoldExamples: [
-      { date: "2026-09-14", price: 638000, condition: "PSA10 鑑定ワンオーナー品", title: "ルチア SR PSA10 裂空のカリスマ" }
-    ],
-    tags: ["PSA10", "サン&ムーンSR", "女子サポート", "手堅い需要"],
-    notes: "国内女性サポートSRの代表格。国内フリマでの買い手が非常に多く、出品後数日以内の成約率が高い。"
-  },
-  {
-    id: "card-006",
-    name: "ゲンガー&ミミッキュGX (SA / SR)",
-    cardSet: "拡張パック タッグボルト",
-    cardNumber: "103/095 SR",
-    releaseYear: 2018,
-    grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=60",
-    ebayPriceUsd: 420,
-    ebayShippingUsd: 25,
-    ebaySellerRating: "99.7%",
-    ebayItemLocation: "Australia (Sydney)",
-    snkrdunkPriceJpy: 98000,
-    torecaJapanPriceJpy: 92000,
-    mercariAvgPriceJpy: 96000,
-    yahooAvgPriceJpy: 94500,
-    demandScore: 85,
-    liquiditySpeedDays: 3.2,
-    priceTrend30d: +15.4,
-    snkrdunkHistory: [
-      { date: "2026-08-20", price: 80000, volume: 8 },
-      { date: "2026-08-27", price: 84000, volume: 10 },
-      { date: "2026-09-03", price: 89000, volume: 12 },
-      { date: "2026-09-10", price: 94000, volume: 15 },
-      { date: "2026-09-18", price: 98000, volume: 14 }
-    ],
-    torecaJapanHistory: [
-      { date: "2026-08-20", buyPrice: 70000, sellPrice: 83000 },
-      { date: "2026-08-27", buyPrice: 74000, sellPrice: 87000 },
-      { date: "2026-09-03", buyPrice: 79000, sellPrice: 91000 },
-      { date: "2026-09-10", buyPrice: 83000, sellPrice: 95000 },
-      { date: "2026-09-18", buyPrice: 83000, sellPrice: 92000 }
-    ],
-    mercariSoldExamples: [
-      { date: "2026-09-18", price: 99000, condition: "素体 美品・初期傷なし・ローダー発送", title: "ゲンガー&ミミッキュGX SA SR タッグボルト 美品" },
-      { date: "2026-09-12", price: 95000, condition: "素体 センタリング良好・PSA提出用", title: "ゲンガー&ミミッキュGX スペシャルアート SR" }
-    ],
-    yahooSoldExamples: [
-      { date: "2026-09-15", price: 96000, condition: "未鑑定 NearMint 美品", title: "タッグボルト ゲンガー&ミミッキュGX SA" }
-    ],
-    tags: ["Raw", "タッグチームSA", "PSA鑑定出し候補", "急騰中"],
-    notes: "海外eBayで未鑑定NM品を安く仕入れ、そのまま国内フリマで即転売するか、PSA鑑定に出してPSA10化することで利益を2〜3倍に跳ね上げられるハイリターン候補。"
-  },
-  {
-    id: "card-007",
     name: "ブラッキーVMAX (SA / HR)",
     cardSet: "強化拡張パック イーブイヒーローズ",
     cardNumber: "095/069 HR",
@@ -272,13 +219,20 @@ export const INITIAL_CARDS = [
     imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60",
     ebayPriceUsd: 2150,
     ebayShippingUsd: 35,
+    rawPriceUsd: 1100,
+    rawShippingUsd: 25,
+    rawPriceJpy: 190000,
+    psa9PriceJpy: 260000,
+    psa10PriceJpy: 460000,
+    psa10GemRate: 0.78,
+    gradingFeeJpy: 3500,
     ebaySellerRating: "100%",
     ebayItemLocation: "United States (New York)",
     snkrdunkPriceJpy: 460000,
     torecaJapanPriceJpy: 440000,
     mercariAvgPriceJpy: 455000,
     yahooAvgPriceJpy: 450000,
-    demandScore: 92,
+    demandScore: 95,
     liquiditySpeedDays: 3.8,
     priceTrend30d: +5.0,
     snkrdunkHistory: [
@@ -297,13 +251,64 @@ export const INITIAL_CARDS = [
     ],
     mercariSoldExamples: [
       { date: "2026-09-17", price: 465000, condition: "PSA10 初版・ホロ欠けなし", title: "【初版・PSA10】ブラッキーVMAX SA HR イーブイヒーローズ" },
-      { date: "2026-09-11", price: 452000, condition: "PSA10 厳選コレクション", title: "ブラッキーVMAX HR SA PSA10" }
+      { date: "2026-09-12", price: 260000, condition: "PSA9 美品", title: "ブラッキーVMAX SA PSA9" },
+      { date: "2026-09-08", price: 195000, condition: "素体 表面裏面無傷・センタリング良好", title: "ブラッキーVMAX SA HR 素体 美品" }
     ],
     yahooSoldExamples: [
       { date: "2026-09-16", price: 458000, condition: "PSA10 即発送", title: "ブラッキーVMAX SA PSA10 イーブイヒーローズ" }
     ],
     tags: ["PSA10", "ブイズ最高峰", "世界的人気", "流動性Sランク"],
-    notes: "国内外問わず圧倒的なコレクター需要。価格が崩れにくく、中長期保有と短期フリップの両方に対応できる万能投資銘柄。"
+    notes: "国内・海外問わず圧倒的流動性。素体18〜19万円で仕入れてPSA10化することで約20万円超の利ざやが得られる。PSA9でも26万円前後で即売れするため元本割れリスクが極小。"
+  },
+  {
+    id: "card-006",
+    name: "リザードン 25th プロモ",
+    cardSet: "25th ANNIVERSARY COLLECTION プロモパック",
+    cardNumber: "001/025 PROMO",
+    releaseYear: 2021,
+    grade: "PSA10",
+    imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&auto=format&fit=crop&q=60",
+    ebayPriceUsd: 260,
+    ebayShippingUsd: 22,
+    rawPriceUsd: 110,
+    rawShippingUsd: 15,
+    rawPriceJpy: 22000,
+    psa9PriceJpy: 32000,
+    psa10PriceJpy: 62000,
+    psa10GemRate: 0.85, // プロモのため初期状態が良くPSA10率85%
+    gradingFeeJpy: 3500,
+    ebaySellerRating: "99.5%",
+    ebayItemLocation: "United Kingdom (London)",
+    snkrdunkPriceJpy: 62000,
+    torecaJapanPriceJpy: 59000,
+    mercariAvgPriceJpy: 61000,
+    yahooAvgPriceJpy: 59800,
+    demandScore: 88,
+    liquiditySpeedDays: 3.5,
+    priceTrend30d: +3.1,
+    snkrdunkHistory: [
+      { date: "2026-08-20", price: 56000, volume: 15 },
+      { date: "2026-08-27", price: 58000, volume: 17 },
+      { date: "2026-09-03", price: 59000, volume: 19 },
+      { date: "2026-09-10", price: 61000, volume: 22 },
+      { date: "2026-09-18", price: 62000, volume: 20 }
+    ],
+    torecaJapanHistory: [
+      { date: "2026-08-20", buyPrice: 48000, sellPrice: 57000 },
+      { date: "2026-08-27", buyPrice: 50000, sellPrice: 59000 },
+      { date: "2026-09-03", buyPrice: 51000, sellPrice: 60000 },
+      { date: "2026-09-10", buyPrice: 53000, sellPrice: 62000 },
+      { date: "2026-09-18", buyPrice: 53000, sellPrice: 59000 }
+    ],
+    mercariSoldExamples: [
+      { date: "2026-09-18", price: 62500, condition: "PSA10 美品・即購入OK", title: "リザードン 25th プロモ PSA10 001/025" },
+      { date: "2026-09-14", price: 32000, condition: "PSA9 鑑定品・防湿庫保管", title: "【PSA9】25周年 リザードン プロモ" }
+    ],
+    yahooSoldExamples: [
+      { date: "2026-09-16", price: 60500, condition: "PSA10 送料無料", title: "リザードン 25th ANNIVERSARY PROMO PSA10" }
+    ],
+    tags: ["PSA10", "小資本OK", "PSA10率85%", "初心者向け鑑定投資"],
+    notes: "低単価で仕入れられるため、複数枚まとめてPSA鑑定に出すバルク鑑定投資に最も向いている。素体約1.8万円仕入れ＋鑑定料3,500円 ➔ PSA10で6.2万円（純利+3.5万円/枚）。"
   }
 ];
 
@@ -311,15 +316,15 @@ export const INITIAL_CARDS = [
 export const DEFAULT_SETTINGS = {
   usdJpyRate: 150.0, // 為替レート (1ドル = 150円)
   customsDutyRate: 0.0, // トレカ関税は通常0%
-  importConsumptionTaxRate: 0.10, // 輸入消費税 (課税価格が1万円超の場合に約10%)
-  taxExemptionThresholdJpy: 16666, // 個人輸入の少額免税ライン (課税価格ベース)
-  domesticShippingJpy: 550, // 国内送料 (宅急便コンパクト・メルカリ便等)
-  packingCostJpy: 150, // 梱包材・スリーブ・ローダー代
-  // 販売プラットフォーム手数料
+  importConsumptionTaxRate: 0.10, // 輸入消費税
+  taxExemptionThresholdJpy: 16666, // 個人輸入の少額免税ライン
+  domesticShippingJpy: 550, // 国内送料
+  packingCostJpy: 150, // 梱包材
+  defaultGradingFeeJpy: 3500, // 標準PSA鑑定代行手数料 (送料・保険・代行料込)
   platformFees: {
-    mercari: { name: "メルカリ", rate: 0.10, description: "10% (最も高いがユーザー数最大・即売れ)" },
-    yahoo: { name: "ヤフーフリマ", rate: 0.05, description: "5% (業界最安水準・利益率UPに最適)" },
-    snkrdunk: { name: "スニーカーダンク", rate: 0.055, description: "5.5% (鑑定付き・相場基準・安心取引)" },
-    torecaJapan: { name: "トレカショップ買取", rate: 0.00, description: "0% (即現金化・買取価格で直接売却)" }
+    mercari: { name: "メルカリ", rate: 0.10, description: "10% (ユーザー数最大・即売れ)" },
+    yahoo: { name: "ヤフーフリマ", rate: 0.05, description: "5% (業界最安水準・利益率UP)" },
+    snkrdunk: { name: "スニーカーダンク", rate: 0.055, description: "5.5% (鑑定付き・相場基準)" },
+    torecaJapan: { name: "トレカショップ買取", rate: 0.00, description: "0% (即現金化・買取価格)" }
   }
 };

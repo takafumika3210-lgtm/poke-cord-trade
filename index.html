@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Poke-Cord Trade | ポケモンカード投資・需給選定ダッシュボード</title>
+  <title>Poke-Cord Trade | ポケモンカード投資・需給＆PSA選定ダッシュボード</title>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,7 +30,7 @@
         </div>
         <div>
           <h1 class="brand-title">Poke-Cord Trade</h1>
-          <div class="brand-subtitle">需給分析 × 海外仕入れ(eBay) × 国内売却アービトラージ</div>
+          <div class="brand-subtitle">需給分析 × 海外仕入れ(eBay) × PSA鑑定グレーディング投資</div>
         </div>
       </div>
 
@@ -44,7 +44,7 @@
         </div>
 
         <button id="openSimulatorBtn" class="btn btn-secondary">
-          ⚡ 投資シミュレーター
+          ⚡ 投資・PSAシミュレーター
         </button>
 
         <button id="openAddCardBtn" class="btn btn-primary">
@@ -52,6 +52,22 @@
         </button>
       </div>
     </header>
+
+    <!-- Strategy Mode Tabs -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+      <div class="view-tabs">
+        <button id="tabArbitrage" class="view-tab-btn active">
+          📦 ① 通常アービトラージ (完成品転売)
+        </button>
+        <button id="tabPsaGrading" class="view-tab-btn">
+          💎 ② PSA鑑定投資 (素体仕入れ ➔ PSA10/9化)
+        </button>
+      </div>
+
+      <div style="font-size: 0.8rem; color: var(--text-muted);">
+        ※海外eBayで素体美品（Near Mint）を仕入れ、PSA鑑定に出してPSA10/PSA9で売却する利益モデルを比較できます
+      </div>
+    </div>
 
     <!-- KPI Summary Grid -->
     <section class="kpi-grid">
@@ -62,7 +78,7 @@
         <div>
           <div class="kpi-label">監視・選定銘柄数</div>
           <div class="kpi-value" id="kpiCardCount">0 枚</div>
-          <div class="kpi-sub">スニダン・トレカジャパン連携中</div>
+          <div class="kpi-sub">スニダン・トレカジャパン連動</div>
         </div>
       </div>
 
@@ -71,9 +87,9 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 7-8.5 8.5-5-5L2 17"></path><path d="M16 7h6v6"></path></svg>
         </div>
         <div>
-          <div class="kpi-label">選定カード 平均ROI (粗利率)</div>
+          <div class="kpi-label" id="kpiLabel2">通常仕入れ 平均ROI</div>
           <div class="kpi-value" id="kpiAvgRoi" style="color: var(--accent-emerald);">+0.0%</div>
-          <div class="kpi-sub">eBay仕入れ比 (関税・手数料控除後)</div>
+          <div class="kpi-sub" id="kpiSub2">eBay仕入れ比 (手数料控除後)</div>
         </div>
       </div>
 
@@ -82,9 +98,9 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg>
         </div>
         <div>
-          <div class="kpi-label">最高利益 期待値 (1枚あたり)</div>
+          <div class="kpi-label" id="kpiLabel3">最高純利益 期待値</div>
           <div class="kpi-value" id="kpiMaxProfit" style="color: #c084fc;">¥0</div>
-          <div class="kpi-sub">国内フリマ(ヤフーフリマ/メルカリ)最高益</div>
+          <div class="kpi-sub">国内フリマ最高益</div>
         </div>
       </div>
 
@@ -93,9 +109,9 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </div>
         <div>
-          <div class="kpi-label">高推奨 (SS / Sランク) 銘柄</div>
+          <div class="kpi-label" id="kpiLabel4">高推奨 (SS / Sランク)</div>
           <div class="kpi-value" id="kpiHighRankCount" style="color: #fbbf24;">0 銘柄</div>
-          <div class="kpi-sub">需給スコア80点以上の強力買い銘柄</div>
+          <div class="kpi-sub" id="kpiSub4">需給スコア80点以上</div>
         </div>
       </div>
     </section>
@@ -105,18 +121,20 @@
       <div class="toolbar-section" style="border-bottom: 1px solid var(--border-glass);">
         <div class="search-box-wrap">
           <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="カード名・パック・タグで検索 (例: リーリエ, PSA10, リザードン)...">
+          <input type="text" id="searchInput" class="search-input" placeholder="カード名・パック・タグで検索 (例: リーリエ, ゲンガー, PSA10)...">
         </div>
 
         <div class="filter-group">
           <select id="gradeFilter" class="filter-select">
             <option value="all">すべてのグレード (PSA10 / Raw)</option>
-            <option value="PSA10">PSA10 (最高鑑定品のみ)</option>
-            <option value="Raw">Raw (未鑑定・素体のみ)</option>
+            <option value="PSA10">PSA10 (鑑定品)</option>
+            <option value="Raw">Raw (素体・未鑑定)</option>
           </select>
 
           <select id="sortFilter" class="filter-select">
             <option value="score">並び順: 需給・投資スコア順 (推奨)</option>
+            <option value="psa_roi">並び順: PSA鑑定期待値ROI順</option>
+            <option value="upside">並び順: アップサイド倍率順 (Raw➔PSA10)</option>
             <option value="profit">並び順: 想定純利益額が高い順</option>
             <option value="roi">並び順: 粗利率 (ROI%) が高い順</option>
             <option value="trend">並び順: 30日価格上昇率順</option>
@@ -131,17 +149,8 @@
       <!-- Table -->
       <div class="table-container">
         <table class="card-table">
-          <thead>
-            <tr>
-              <th>判定</th>
-              <th>カード情報 / グレード</th>
-              <th>需給スコア / トレンド</th>
-              <th>eBay仕入れ ($ / 円総額)</th>
-              <th>国内想定売価 / 推奨先</th>
-              <th>想定純利益 (手取り)</th>
-              <th>粗利率 (ROI)</th>
-              <th>操作</th>
-            </tr>
+          <thead id="cardTableHead">
+            <!-- JavaScriptで動的生成 -->
           </thead>
           <tbody id="cardTableBody">
             <!-- JavaScriptで動的生成 -->
@@ -151,14 +160,29 @@
     </main>
 
     <!-- Strategy Guide Footer Panel -->
-    <footer class="glass-panel" style="padding: 20px 24px; font-size: 0.84rem; color: var(--text-secondary); line-height: 1.6;">
-      <div style="font-weight: 700; color: #ffffff; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-        <span style="color: var(--accent-blue);">📘</span> ポケモンカード需給投資・アービトラージ戦略ガイド
+    <footer class="glass-panel" style="padding: 22px 26px; font-size: 0.84rem; color: var(--text-secondary); line-height: 1.65;">
+      <div style="font-weight: 700; color: #ffffff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+        <span style="color: var(--accent-blue);">🔍</span> 監視銘柄の選定ロジック & PSA鑑定投資（グレーディング・アービトラージ）戦略
       </div>
-      <p>
-        ・<strong>需給判断の基準:</strong> スニーカーダンクの直近成約頻度とトレカジャパンの買取価格推移から需給モメンタムを算出しています。相場上昇局面かつ回転日数が5日以内の銘柄は高スコア（SS/S）となります。<br>
-        ・<strong>仕入れ＆販売コスト計算:</strong> eBay仕入れ総額（本体＋国際送料＋課税価格60%に対する輸入消費税10%）と、各国内マーケットの手数料（ヤフーフリマ5%, スニダン5.5%, メルカリ10%）および国内配送料・梱包費を自動控除して純利益を計算しています。
-      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 10px;">
+        <div style="background: rgba(15, 23, 42, 0.5); padding: 14px; border-radius: 10px; border: 1px solid var(--border-glass);">
+          <div style="font-weight: 700; color: var(--accent-blue); margin-bottom: 4px;">🎯 監視銘柄はどうやって決めているか？</div>
+          <p>
+            1. <strong>流動性（回転スピード）:</strong> スニーカーダンクで月間成約数が多く、出品から1週間以内に売買が成立するカード。<br>
+            2. <strong>国内外価格ギャップ:</strong> 海外eBayで安値放置されている素体やPSA10があり、為替換算しても国内（メルカリ・ヤフーフリマ）との差益が大きい銘柄。<br>
+            3. <strong>ブランド力・コレクション性:</strong> サン&ムーン/ソード&シールドの女性サポートSR、ピカチュウ/リザードン/ブイズ、絶版SA（スペシャルアート）など世界需要がある銘柄。
+          </p>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.5); padding: 14px; border-radius: 10px; border: 1px solid var(--border-glass);">
+          <div style="font-weight: 700; color: #c084fc; margin-bottom: 4px;">💎 PSA鑑定投資（素体 ➔ PSA10/9）の判断基準</div>
+          <p>
+            1. <strong>アップサイド倍率:</strong> 素体仕入れ原価（本体＋送料＋鑑定料約3,500円）に対して、PSA10売価が2.5倍〜3倍以上に化けるか。<br>
+            2. <strong>PSA9のセーフティネット:</strong> 万が一PSA10を逃してPSA9になっても、売却益で元本割れしない「防御力（安全銘柄）」があるか。<br>
+            3. <strong>PSA10取得期待率（Gem Rate）:</strong> 初期傷の多さやセンタリング難度を考慮し、加重平均期待値（EV）がプラス50%以上になる銘柄を選定。
+          </p>
+        </div>
+      </div>
     </footer>
   </div>
 

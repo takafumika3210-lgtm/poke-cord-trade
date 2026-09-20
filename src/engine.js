@@ -1,5 +1,5 @@
 ﻿/**
- * ポケモンカード投資・アービトラージ計算エンジン
+ * ポケモンカード投資・アービトラージ＆PSAグレーディング計算エンジン
  */
 
 /**
@@ -60,17 +60,85 @@ export function calculateDomesticSaleProfit(salePriceJpy, totalImportCostJpy, pl
 }
 
 /**
- * カード全般の投資分析指標（最適販売チャネル・需給スコア・総合判定）を算出
+ * PSA鑑定投資（素体仕入れ ➔ PSA10/PSA9化）の損益・期待値分析
+ */
+export function analyzePsaGradingStrategy(card, settings) {
+  const rawPriceUsd = card.rawPriceUsd || (card.ebayPriceUsd * 0.45);
+  const rawShippingUsd = card.rawShippingUsd || 25;
+  const gradingFeeJpy = card.gradingFeeJpy || settings.defaultGradingFeeJpy || 3500;
+  const gemRate = card.psa10GemRate || 0.70; // PSA10取得期待率
+
+  // 素体仕入れコスト
+  const rawImportCost = calculateImportCost(rawPriceUsd, rawShippingUsd, settings);
+  const totalGradedCostJpy = rawImportCost.totalCostJpy + gradingFeeJpy;
+
+  const psa10SalePriceJpy = card.psa10PriceJpy || card.snkrdunkPriceJpy || 100000;
+  const psa9SalePriceJpy = card.psa9PriceJpy || Math.round(psa10SalePriceJpy * 0.55);
+
+  // 国内最適チャネルでの売却試算 (ヤフーフリマ5%を基準)
+  const psa10ProfitYahoo = calculateDomesticSaleProfit(psa10SalePriceJpy, totalGradedCostJpy, "yahoo", settings);
+  const psa10ProfitSnkr = calculateDomesticSaleProfit(psa10SalePriceJpy, totalGradedCostJpy, "snkrdunk", settings);
+  const psa10BestProfit = psa10ProfitYahoo.netProfitJpy > psa10ProfitSnkr.netProfitJpy ? psa10ProfitYahoo : psa10ProfitSnkr;
+
+  const psa9ProfitYahoo = calculateDomesticSaleProfit(psa9SalePriceJpy, totalGradedCostJpy, "yahoo", settings);
+  const psa9ProfitSnkr = calculateDomesticSaleProfit(psa9SalePriceJpy, totalGradedCostJpy, "snkrdunk", settings);
+  const psa9BestProfit = psa9ProfitYahoo.netProfitJpy > psa9ProfitSnkr.netProfitJpy ? psa9ProfitYahoo : psa9ProfitSnkr;
+
+  // 期待値 (Expected Value)
+  const expectedProfitJpy = Math.round((psa10BestProfit.netProfitJpy * gemRate) + (psa9BestProfit.netProfitJpy * (1 - gemRate)));
+  const expectedRoiPercent = totalGradedCostJpy > 0 ? parseFloat(((expectedProfitJpy / totalGradedCostJpy) * 100).toFixed(1)) : 0;
+  
+  // アップサイド倍率 (PSA10価格 / 素体仕入れ円換算)
+  const upsideMultiplier = rawImportCost.totalCostJpy > 0 ? parseFloat((psa10SalePriceJpy / rawImportCost.totalCostJpy).toFixed(2)) : 0;
+
+  // 安全性判定: PSA9でも黒字か
+  const isPsa9Safe = psa9BestProfit.netProfitJpy >= 0;
+
+  // PSA鑑定推奨度ランク (PSA-SS, PSA-S, PSA-A, PSA-B)
+  let psaRank = "PSA-B";
+  let psaRecommendation = "鑑定慎重 (PSA10必須)";
+  if (expectedRoiPercent >= 80 && isPsa9Safe) {
+    psaRank = "PSA-SS";
+    psaRecommendation = "超特選 (PSA9でも黒字・圧倒的利回り)";
+  } else if (expectedRoiPercent >= 50) {
+    psaRank = "PSA-S";
+    psaRecommendation = "高期待値 (鑑定出し強く推奨)";
+  } else if (expectedRoiPercent >= 25) {
+    psaRank = "PSA-A";
+    psaRecommendation = "手堅い鑑定利益";
+  }
+
+  return {
+    rawPriceUsd,
+    rawShippingUsd,
+    rawImportCost,
+    gradingFeeJpy,
+    totalGradedCostJpy,
+    gemRate,
+    psa10SalePriceJpy,
+    psa9SalePriceJpy,
+    psa10Profit: psa10BestProfit,
+    psa9Profit: psa9BestProfit,
+    expectedProfitJpy,
+    expectedRoiPercent,
+    upsideMultiplier,
+    isPsa9Safe,
+    psaRank,
+    psaRecommendation
+  };
+}
+
+/**
+ * カード全般の総合投資分析（通常アービトラージ＋PSA鑑定戦略）
  */
 export function analyzeCardInvestment(card, settings) {
   const importCost = calculateImportCost(card.ebayPriceUsd, card.ebayShippingUsd, settings);
 
-  // 各プラットフォームでのシミュレーション
+  // 通常仕入れ（PSA10完成品または現状グレードをそのまま国内転売）
   const mercariAnalysis = calculateDomesticSaleProfit(card.mercariAvgPriceJpy, importCost.totalCostJpy, "mercari", settings);
   const yahooAnalysis = calculateDomesticSaleProfit(card.yahooAvgPriceJpy, importCost.totalCostJpy, "yahoo", settings);
   const snkrdunkAnalysis = calculateDomesticSaleProfit(card.snkrdunkPriceJpy, importCost.totalCostJpy, "snkrdunk", settings);
   
-  // トレカジャパン買取価格
   const latestToreca = card.torecaJapanHistory && card.torecaJapanHistory.length > 0 
     ? card.torecaJapanHistory[card.torecaJapanHistory.length - 1].buyPrice 
     : card.torecaJapanPriceJpy * 0.85;
@@ -83,7 +151,6 @@ export function analyzeCardInvestment(card, settings) {
     { key: "torecaJapan", data: torecaAnalysis }
   ];
 
-  // 純利益が最も高い最適チャネルを特定
   let bestChannel = channels[0];
   channels.forEach(ch => {
     if (ch.data.netProfitJpy > bestChannel.data.netProfitJpy) {
@@ -91,8 +158,10 @@ export function analyzeCardInvestment(card, settings) {
     }
   });
 
-  // 需給スコア総合判定（0〜100点）
-  // 構成要素: 利益率(35%) + 需給スコア(35%) + トレンドモメンタム(15%) + 回転日数(15%)
+  // PSA鑑定投資分析
+  const psaAnalysis = analyzePsaGradingStrategy(card, settings);
+
+  // 総合スコア
   const roiScore = Math.min(Math.max((bestChannel.data.roiPercent / 30) * 100, 0), 100);
   const demandBase = card.demandScore || 70;
   const trendScore = Math.min(Math.max((card.priceTrend30d + 10) * 5, 0), 100);
@@ -101,24 +170,19 @@ export function analyzeCardInvestment(card, settings) {
   const overallScore = Math.round((roiScore * 0.35) + (demandBase * 0.35) + (trendScore * 0.15) + (liquidityScore * 0.15));
 
   let rank = "C";
-  let badgeColor = "gray";
   let recommendation = "様子見";
 
   if (overallScore >= 88) {
     rank = "SS";
-    badgeColor = "emerald";
     recommendation = "最優先・強力買い推奨";
   } else if (overallScore >= 78) {
     rank = "S";
-    badgeColor = "blue";
     recommendation = "買い推奨（仕入れ好機）";
   } else if (overallScore >= 65) {
     rank = "A";
-    badgeColor = "indigo";
     recommendation = "利益確定・手堅い投資";
   } else if (overallScore >= 50) {
     rank = "B";
-    badgeColor = "amber";
     recommendation = "相場注視・指値仕入れ";
   }
 
@@ -134,7 +198,7 @@ export function analyzeCardInvestment(card, settings) {
     bestChannel,
     overallScore,
     rank,
-    badgeColor,
-    recommendation
+    recommendation,
+    psaAnalysis // PSA鑑定分析結果
   };
 }
