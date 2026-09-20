@@ -1,0 +1,171 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poke-Cord Trade | ポケモンカード投資・需給選定ダッシュボード</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header glass-panel">
+      <div class="header-brand">
+        <div class="logo-badge">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: #ffffff;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+            <path d="M2 12h20"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">Poke-Cord Trade</h1>
+          <div class="brand-subtitle">需給分析 × 海外仕入れ(eBay) × 国内売却アービトラージ</div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="rate-pill">
+          <label for="usdJpyRateInput">為替レート (USD/JPY):</label>
+          <div class="rate-input-wrapper">
+            <span>¥</span>
+            <input type="number" id="usdJpyRateInput" class="rate-input" step="0.5" value="150.0">
+          </div>
+        </div>
+
+        <button id="openSimulatorBtn" class="btn btn-secondary">
+          ⚡ 投資シミュレーター
+        </button>
+
+        <button id="openAddCardBtn" class="btn btn-primary">
+          ➕ カード追加
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Summary Grid -->
+    <section class="kpi-grid">
+      <div class="glass-panel kpi-card blue">
+        <div class="kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M6 6h10"></path><path d="M6 10h10"></path></svg>
+        </div>
+        <div>
+          <div class="kpi-label">監視・選定銘柄数</div>
+          <div class="kpi-value" id="kpiCardCount">0 枚</div>
+          <div class="kpi-sub">スニダン・トレカジャパン連携中</div>
+        </div>
+      </div>
+
+      <div class="glass-panel kpi-card emerald">
+        <div class="kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 7-8.5 8.5-5-5L2 17"></path><path d="M16 7h6v6"></path></svg>
+        </div>
+        <div>
+          <div class="kpi-label">選定カード 平均ROI (粗利率)</div>
+          <div class="kpi-value" id="kpiAvgRoi" style="color: var(--accent-emerald);">+0.0%</div>
+          <div class="kpi-sub">eBay仕入れ比 (関税・手数料控除後)</div>
+        </div>
+      </div>
+
+      <div class="glass-panel kpi-card purple">
+        <div class="kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 18V6"></path></svg>
+        </div>
+        <div>
+          <div class="kpi-label">最高利益 期待値 (1枚あたり)</div>
+          <div class="kpi-value" id="kpiMaxProfit" style="color: #c084fc;">¥0</div>
+          <div class="kpi-sub">国内フリマ(ヤフーフリマ/メルカリ)最高益</div>
+        </div>
+      </div>
+
+      <div class="glass-panel kpi-card amber">
+        <div class="kpi-icon-wrap">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <div>
+          <div class="kpi-label">高推奨 (SS / Sランク) 銘柄</div>
+          <div class="kpi-value" id="kpiHighRankCount" style="color: #fbbf24;">0 銘柄</div>
+          <div class="kpi-sub">需給スコア80点以上の強力買い銘柄</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content Section: Toolbar + Table -->
+    <main class="glass-panel" style="padding: 0; overflow: hidden;">
+      <div class="toolbar-section" style="border-bottom: 1px solid var(--border-glass);">
+        <div class="search-box-wrap">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="カード名・パック・タグで検索 (例: リーリエ, PSA10, リザードン)...">
+        </div>
+
+        <div class="filter-group">
+          <select id="gradeFilter" class="filter-select">
+            <option value="all">すべてのグレード (PSA10 / Raw)</option>
+            <option value="PSA10">PSA10 (最高鑑定品のみ)</option>
+            <option value="Raw">Raw (未鑑定・素体のみ)</option>
+          </select>
+
+          <select id="sortFilter" class="filter-select">
+            <option value="score">並び順: 需給・投資スコア順 (推奨)</option>
+            <option value="profit">並び順: 想定純利益額が高い順</option>
+            <option value="roi">並び順: 粗利率 (ROI%) が高い順</option>
+            <option value="trend">並び順: 30日価格上昇率順</option>
+          </select>
+
+          <button id="exportCsvBtn" class="btn btn-secondary" style="padding: 9px 14px; font-size: 0.82rem;">
+            📥 CSV出力
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <table class="card-table">
+          <thead>
+            <tr>
+              <th>判定</th>
+              <th>カード情報 / グレード</th>
+              <th>需給スコア / トレンド</th>
+              <th>eBay仕入れ ($ / 円総額)</th>
+              <th>国内想定売価 / 推奨先</th>
+              <th>想定純利益 (手取り)</th>
+              <th>粗利率 (ROI)</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="cardTableBody">
+            <!-- JavaScriptで動的生成 -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Strategy Guide Footer Panel -->
+    <footer class="glass-panel" style="padding: 20px 24px; font-size: 0.84rem; color: var(--text-secondary); line-height: 1.6;">
+      <div style="font-weight: 700; color: #ffffff; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+        <span style="color: var(--accent-blue);">📘</span> ポケモンカード需給投資・アービトラージ戦略ガイド
+      </div>
+      <p>
+        ・<strong>需給判断の基準:</strong> スニーカーダンクの直近成約頻度とトレカジャパンの買取価格推移から需給モメンタムを算出しています。相場上昇局面かつ回転日数が5日以内の銘柄は高スコア（SS/S）となります。<br>
+        ・<strong>仕入れ＆販売コスト計算:</strong> eBay仕入れ総額（本体＋国際送料＋課税価格60%に対する輸入消費税10%）と、各国内マーケットの手数料（ヤフーフリマ5%, スニダン5.5%, メルカリ10%）および国内配送料・梱包費を自動控除して純利益を計算しています。
+      </p>
+    </footer>
+  </div>
+
+  <!-- Modal Container -->
+  <div id="modalContainer"></div>
+
+  <!-- Application Script -->
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>
