@@ -2,16 +2,23 @@ import { INITIAL_CARDS, DEFAULT_SETTINGS } from './data.js';
 import { calculateImportCost, calculateDomesticSaleProfit, analyzeCardInvestment, analyzePsaGradingStrategy } from './engine.js';
 
 let state = {
-  cards: JSON.parse(localStorage.getItem('poke_cards')) || INITIAL_CARDS,
+  cards: INITIAL_CARDS, // 最新のデータセットを優先
   settings: JSON.parse(localStorage.getItem('poke_settings')) || DEFAULT_SETTINGS,
   activeTab: 'arbitrage', // 'arbitrage' | 'psa_grading'
   filterGrade: 'all',
+  filterBudget: 'all', // 'all' | 'under_30k' | 'under_50k' | 'under_100k' | 'over_100k'
   sortBy: 'score',
   searchQuery: '',
   selectedCardId: null,
   activeModal: null,
   chartInstance: null
 };
+
+// ユーザーがlocalStorageに保存している追加カードがあれば結合
+const savedCustomCards = JSON.parse(localStorage.getItem('poke_custom_cards')) || [];
+if (savedCustomCards.length > 0) {
+  state.cards = [...savedCustomCards, ...INITIAL_CARDS];
+}
 
 const formatJpy = (num) => '¥' + Math.round(num).toLocaleString('ja-JP');
 const formatUsd = (num) => '$' + Number(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -60,6 +67,14 @@ function setupEventListeners() {
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       state.searchQuery = e.target.value.toLowerCase();
+      renderTable();
+    });
+  }
+
+  const budgetFilter = document.getElementById('budgetFilter');
+  if (budgetFilter) {
+    budgetFilter.addEventListener('change', (e) => {
+      state.filterBudget = e.target.value;
       renderTable();
     });
   }
@@ -113,7 +128,7 @@ function renderKPIs() {
   if (state.activeTab === 'arbitrage') {
     const avgRoi = totalCount > 0 ? (analyzed.reduce((acc, c) => acc + c.bestChannel.data.roiPercent, 0) / totalCount).toFixed(1) : 0;
     const maxProfit = totalCount > 0 ? Math.max(...analyzed.map(c => c.bestChannel.data.netProfitJpy)) : 0;
-    const highRankCount = analyzed.filter(c => c.rank === 'SS' || c.rank === 'S').length;
+    const under30kCount = analyzed.filter(c => c.importCost.totalCostJpy < 30000).length;
 
     document.getElementById('kpiLabel2').textContent = '通常仕入れ 平均ROI';
     document.getElementById('kpiSub2').textContent = 'eBay仕入れ比 (手数料控除後)';
@@ -122,13 +137,13 @@ function renderKPIs() {
     document.getElementById('kpiLabel3').textContent = '最高純利 (通常仕入れ)';
     document.getElementById('kpiMaxProfit').textContent = formatJpy(maxProfit);
 
-    document.getElementById('kpiLabel4').textContent = '高推奨 (SS/S) 銘柄数';
-    document.getElementById('kpiSub4').textContent = '需給スコア80点以上';
-    document.getElementById('kpiHighRankCount').textContent = highRankCount + ' 銘柄';
+    document.getElementById('kpiLabel4').textContent = '🎯 3万円未満で仕入れ可能';
+    document.getElementById('kpiSub4').textContent = `全${totalCount}銘柄中 ${under30kCount}銘柄`;
+    document.getElementById('kpiHighRankCount').textContent = `${under30kCount} 銘柄`;
   } else {
     const avgExpectedRoi = totalCount > 0 ? (analyzed.reduce((acc, c) => acc + c.psaAnalysis.expectedRoiPercent, 0) / totalCount).toFixed(1) : 0;
     const maxPsa10Profit = totalCount > 0 ? Math.max(...analyzed.map(c => c.psaAnalysis.psa10Profit.netProfitJpy)) : 0;
-    const safeCount = analyzed.filter(c => c.psaAnalysis.isPsa9Safe).length;
+    const under30kPsaCount = analyzed.filter(c => c.psaAnalysis.totalGradedCostJpy < 30000).length;
 
     document.getElementById('kpiLabel2').textContent = 'PSA鑑定 加重平均期待ROI';
     document.getElementById('kpiSub2').textContent = 'PSA10率×PSA9率 加重平均';
@@ -137,9 +152,9 @@ function renderKPIs() {
     document.getElementById('kpiLabel3').textContent = 'PSA10化 最高純利益';
     document.getElementById('kpiMaxProfit').textContent = formatJpy(maxPsa10Profit);
 
-    document.getElementById('kpiLabel4').textContent = 'PSA9でも黒字の安全銘柄';
-    document.getElementById('kpiSub4').textContent = '元本割れリスク極小';
-    document.getElementById('kpiHighRankCount').textContent = `${safeCount} / ${totalCount} 銘柄`;
+    document.getElementById('kpiLabel4').textContent = '🎯 3万円未満で鑑定投資可能';
+    document.getElementById('kpiSub4').textContent = `素体仕入れ＋鑑定料込`;
+    document.getElementById('kpiHighRankCount').textContent = `${under30kPsaCount} 銘柄`;
   }
 
   document.getElementById('kpiCardCount').textContent = totalCount + ' 枚';
@@ -184,6 +199,19 @@ function renderTable() {
 
   let analyzed = state.cards.map(c => analyzeCardInvestment(c, state.settings));
 
+  // 予算フィルタ
+  if (state.filterBudget !== 'all') {
+    analyzed = analyzed.filter(item => {
+      const cost = state.activeTab === 'arbitrage' ? item.importCost.totalCostJpy : item.psaAnalysis.totalGradedCostJpy;
+      if (state.filterBudget === 'under_30k') return cost < 30000;
+      if (state.filterBudget === 'under_50k') return cost < 50000;
+      if (state.filterBudget === 'under_100k') return cost < 100000;
+      if (state.filterBudget === 'over_100k') return cost >= 100000;
+      return true;
+    });
+  }
+
+  // グレードフィルタ
   if (state.filterGrade !== 'all') {
     analyzed = analyzed.filter(item => {
       if (state.filterGrade === 'PSA10') return item.card.grade === 'PSA10';
@@ -192,6 +220,7 @@ function renderTable() {
     });
   }
 
+  // 検索クエリ
   if (state.searchQuery) {
     analyzed = analyzed.filter(item => 
       item.card.name.toLowerCase().includes(state.searchQuery) ||
@@ -200,6 +229,7 @@ function renderTable() {
     );
   }
 
+  // ソート
   analyzed.sort((a, b) => {
     if (state.activeTab === 'arbitrage') {
       if (state.sortBy === 'profit') return b.bestChannel.data.netProfitJpy - a.bestChannel.data.netProfitJpy;
@@ -217,7 +247,7 @@ function renderTable() {
   tbody.innerHTML = '';
 
   if (analyzed.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">条件に一致するカードが見つかりませんでした。</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">条件（予算・グレードなど）に一致するカードが見つかりませんでした。</td></tr>`;
     return;
   }
 
@@ -225,6 +255,8 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'card-row';
     tr.onclick = () => openCardDetailModal(item.card.id);
+
+    const isUnder30k = (state.activeTab === 'arbitrage' ? item.importCost.totalCostJpy : item.psaAnalysis.totalGradedCostJpy) < 30000;
 
     if (state.activeTab === 'arbitrage') {
       const rankBadgeClass = `badge-rank-${item.rank.toLowerCase()}`;
@@ -237,7 +269,10 @@ function renderTable() {
             <img src="${item.card.imageUrl}" alt="${item.card.name}" class="card-thumb" onerror="this.src='https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=100&q=50'">
             <div>
               <div class="card-name-title">${item.card.name}</div>
-              <div class="card-meta-sub">${item.card.cardSet} • <span class="badge badge-grade">${item.card.grade}</span></div>
+              <div class="card-meta-sub">
+                ${item.card.cardSet} • <span class="badge badge-grade">${item.card.grade}</span>
+                ${isUnder30k ? '<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-left:4px;">🎯 3万円未満</span>' : ''}
+              </div>
             </div>
           </div>
         </td>
@@ -252,7 +287,9 @@ function renderTable() {
         </td>
         <td>
           <div style="font-weight: 700; color: #ffffff;">${formatUsd(item.card.ebayPriceUsd)}</div>
-          <div style="font-size: 0.74rem; color: var(--text-muted);">総原価: ${formatJpy(item.importCost.totalCostJpy)}</div>
+          <div style="font-size: 0.74rem; color: ${isUnder30k ? '#38bdf8' : 'var(--text-muted)'}; font-weight: ${isUnder30k ? '700' : 'normal'};">
+            総原価: ${formatJpy(item.importCost.totalCostJpy)}
+          </div>
         </td>
         <td>
           <div style="font-weight: 700; color: #ffffff;">${formatJpy(bestCh.salePriceJpy)}</div>
@@ -287,12 +324,17 @@ function renderTable() {
             <img src="${item.card.imageUrl}" alt="${item.card.name}" class="card-thumb" onerror="this.src='https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=100&q=50'">
             <div>
               <div class="card-name-title">${item.card.name}</div>
-              <div class="card-meta-sub">${item.card.cardSet} • <span class="badge badge-grade">素体美品(NM)</span></div>
+              <div class="card-meta-sub">
+                ${item.card.cardSet} • <span class="badge badge-grade">素体美品(NM)</span>
+                ${isUnder30k ? '<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-left:4px;">🎯 3万円未満</span>' : ''}
+              </div>
             </div>
           </div>
         </td>
         <td>
-          <div style="font-weight: 700; color: #ffffff;">${formatJpy(psa.totalGradedCostJpy)}</div>
+          <div style="font-weight: 700; color: ${isUnder30k ? '#38bdf8' : '#ffffff'}; font-size: 0.95rem;">
+            ${formatJpy(psa.totalGradedCostJpy)}
+          </div>
           <div style="font-size: 0.72rem; color: var(--text-muted);">素体$${psa.rawPriceUsd} + 鑑定料${formatJpy(psa.gradingFeeJpy)}</div>
         </td>
         <td>
@@ -876,7 +918,9 @@ window.handleCreateCard = function(e) {
   };
 
   state.cards.unshift(newCard);
-  localStorage.setItem('poke_cards', JSON.stringify(state.cards));
+  const currentCustom = JSON.parse(localStorage.getItem('poke_custom_cards')) || [];
+  currentCustom.unshift(newCard);
+  localStorage.setItem('poke_custom_cards', JSON.stringify(currentCustom));
   closeModal();
   renderApp();
 }

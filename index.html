@@ -109,9 +109,9 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </div>
         <div>
-          <div class="kpi-label" id="kpiLabel4">高推奨 (SS / Sランク)</div>
+          <div class="kpi-label" id="kpiLabel4">🎯 3万円未満で仕入れ可能</div>
           <div class="kpi-value" id="kpiHighRankCount" style="color: #fbbf24;">0 銘柄</div>
-          <div class="kpi-sub" id="kpiSub4">需給スコア80点以上</div>
+          <div class="kpi-sub" id="kpiSub4">小資本で高利益が狙える銘柄</div>
         </div>
       </div>
     </section>
@@ -121,10 +121,19 @@
       <div class="toolbar-section" style="border-bottom: 1px solid var(--border-glass);">
         <div class="search-box-wrap">
           <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="カード名・パック・タグで検索 (例: リーリエ, ゲンガー, PSA10)...">
+          <input type="text" id="searchInput" class="search-input" placeholder="カード名・パック・タグで検索 (例: コイキング, ピカチュウ, リザードン)...">
         </div>
 
         <div class="filter-group">
+          <!-- 仕入れ予算フィルタ -->
+          <select id="budgetFilter" class="filter-select" style="border-color: #38bdf8; font-weight: 700; color: #38bdf8; background: rgba(15, 23, 42, 0.95);">
+            <option value="all">💰 すべての仕入れ予算</option>
+            <option value="under_30k" selected>🎯 3万円未満 (小資本・低リスク)</option>
+            <option value="under_50k">5万円未満</option>
+            <option value="under_100k">10万円未満</option>
+            <option value="over_100k">10万円以上 (ハイエンド)</option>
+          </select>
+
           <select id="gradeFilter" class="filter-select">
             <option value="all">すべてのグレード (PSA10 / Raw)</option>
             <option value="PSA10">PSA10 (鑑定品)</option>
@@ -162,15 +171,15 @@
     <!-- Strategy Guide Footer Panel -->
     <footer class="glass-panel" style="padding: 22px 26px; font-size: 0.84rem; color: var(--text-secondary); line-height: 1.65;">
       <div style="font-weight: 700; color: #ffffff; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
-        <span style="color: var(--accent-blue);">🔍</span> 監視銘柄の選定ロジック & PSA鑑定投資（グレーディング・アービトラージ）戦略
+        <span style="color: var(--accent-blue);">🔍</span> 監視銘柄の選定ロジック & 3万円未満・小資本アービトラージ戦略
       </div>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 10px;">
         <div style="background: rgba(15, 23, 42, 0.5); padding: 14px; border-radius: 10px; border: 1px solid var(--border-glass);">
-          <div style="font-weight: 700; color: var(--accent-blue); margin-bottom: 4px;">🎯 監視銘柄はどうやって決めているか？</div>
+          <div style="font-weight: 700; color: var(--accent-blue); margin-bottom: 4px;">🎯 3万円未満で仕入れ可能な特選銘柄</div>
           <p>
-            1. <strong>流動性（回転スピード）:</strong> スニーカーダンクで月間成約数が多く、出品から1週間以内に売買が成立するカード。<br>
-            2. <strong>国内外価格ギャップ:</strong> 海外eBayで安値放置されている素体やPSA10があり、為替換算しても国内（メルカリ・ヤフーフリマ）との差益が大きい銘柄。<br>
-            3. <strong>ブランド力・コレクション性:</strong> サン&ムーン/ソード&シールドの女性サポートSR、ピカチュウ/リザードン/ブイズ、絶版SA（スペシャルアート）など世界需要がある銘柄。
+            ・<strong>コイキング AR / ピカチュウ AR / イーブイ AR:</strong> 素体2,000円〜4,000円で仕入れられ、PSA10化で1.2万〜1.8万円で即売れ。<br>
+            ・<strong>カミツレのきらめき SR / フウロ SR:</strong> 女子サポートSRの登竜門。素体3,000円〜8,000円台。<br>
+            ・<strong>ブラッキーV SA / リザードン25th / ピカチュウマスボミラー:</strong> 1.5万〜2.5万円の素体からPSA10で5万〜7万円に跳ね上がる中単価エース。
           </p>
         </div>
 
