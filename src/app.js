@@ -2,7 +2,7 @@ import { INITIAL_CARDS, DEFAULT_SETTINGS } from './data.js';
 import { calculateImportCost, calculateDomesticSaleProfit, analyzeCardInvestment, analyzePsaGradingStrategy } from './engine.js';
 
 let state = {
-  cards: INITIAL_CARDS, // 最新のデータセットを優先
+  cards: INITIAL_CARDS,
   settings: JSON.parse(localStorage.getItem('poke_settings')) || DEFAULT_SETTINGS,
   activeTab: 'arbitrage', // 'arbitrage' | 'psa_grading'
   filterGrade: 'all',
@@ -14,7 +14,6 @@ let state = {
   chartInstance: null
 };
 
-// ユーザーがlocalStorageに保存している追加カードがあれば結合
 const savedCustomCards = JSON.parse(localStorage.getItem('poke_custom_cards')) || [];
 if (savedCustomCards.length > 0) {
   state.cards = [...savedCustomCards, ...INITIAL_CARDS];
@@ -174,7 +173,7 @@ function renderTableHeader() {
         <th>国内想定売価 / 推奨先</th>
         <th>想定純利益 (手取り)</th>
         <th>粗利率 (ROI)</th>
-        <th>操作</th>
+        <th>購入先 / 分析</th>
       </tr>
     `;
   } else {
@@ -187,7 +186,7 @@ function renderTableHeader() {
         <th>PSA9化 売価 / 純利</th>
         <th>PSA10期待率</th>
         <th>期待値ROI (アップサイド)</th>
-        <th>操作</th>
+        <th>購入先 / 分析</th>
       </tr>
     `;
   }
@@ -199,7 +198,6 @@ function renderTable() {
 
   let analyzed = state.cards.map(c => analyzeCardInvestment(c, state.settings));
 
-  // 予算フィルタ
   if (state.filterBudget !== 'all') {
     analyzed = analyzed.filter(item => {
       const cost = state.activeTab === 'arbitrage' ? item.importCost.totalCostJpy : item.psaAnalysis.totalGradedCostJpy;
@@ -211,7 +209,6 @@ function renderTable() {
     });
   }
 
-  // グレードフィルタ
   if (state.filterGrade !== 'all') {
     analyzed = analyzed.filter(item => {
       if (state.filterGrade === 'PSA10') return item.card.grade === 'PSA10';
@@ -220,7 +217,6 @@ function renderTable() {
     });
   }
 
-  // 検索クエリ
   if (state.searchQuery) {
     analyzed = analyzed.filter(item => 
       item.card.name.toLowerCase().includes(state.searchQuery) ||
@@ -229,7 +225,6 @@ function renderTable() {
     );
   }
 
-  // ソート
   analyzed.sort((a, b) => {
     if (state.activeTab === 'arbitrage') {
       if (state.sortBy === 'profit') return b.bestChannel.data.netProfitJpy - a.bestChannel.data.netProfitJpy;
@@ -247,7 +242,7 @@ function renderTable() {
   tbody.innerHTML = '';
 
   if (analyzed.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">条件（予算・グレードなど）に一致するカードが見つかりませんでした。</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">条件に一致するカードが見つかりませんでした。</td></tr>`;
     return;
   }
 
@@ -257,6 +252,7 @@ function renderTable() {
     tr.onclick = () => openCardDetailModal(item.card.id);
 
     const isUnder30k = (state.activeTab === 'arbitrage' ? item.importCost.totalCostJpy : item.psaAnalysis.totalGradedCostJpy) < 30000;
+    const ebayUrl = item.card.ebayBuyUrl || `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(item.card.name + ' japanese pokemon raw')}`;
 
     if (state.activeTab === 'arbitrage') {
       const rankBadgeClass = `badge-rank-${item.rank.toLowerCase()}`;
@@ -266,7 +262,7 @@ function renderTable() {
         <td><span class="badge ${rankBadgeClass}">${item.rank}</span></td>
         <td>
           <div class="card-cell-info">
-            <img src="${item.card.imageUrl}" alt="${item.card.name}" class="card-thumb" onerror="this.src='https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=100&q=50'">
+            <img src="${item.card.imageUrl}" alt="${item.card.name}" class="card-thumb" onerror="this.src='${item.card.fallbackImageUrl || 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=100&q=50'}'">
             <div>
               <div class="card-name-title">${item.card.name}</div>
               <div class="card-meta-sub">
@@ -303,9 +299,14 @@ function renderTable() {
           <span class="roi-badge">+${bestCh.roiPercent}%</span>
         </td>
         <td>
-          <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="event.stopPropagation(); openCardDetailModal('${item.card.id}')">
-            需給分析 ➔
-          </button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <a href="${ebayUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 5px 8px; font-size: 0.75rem; text-decoration: none; color: #38bdf8; display: inline-flex; align-items: center; gap: 4px;" onclick="event.stopPropagation();" title="eBayで実際の商品ページ・出品を閲覧">
+              🛒 eBay
+            </a>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.78rem;" onclick="event.stopPropagation(); openCardDetailModal('${item.card.id}')">
+              分析 ➔
+            </button>
+          </div>
         </td>
       `;
     } else {
@@ -321,7 +322,7 @@ function renderTable() {
         </td>
         <td>
           <div class="card-cell-info">
-            <img src="${item.card.imageUrl}" alt="${item.card.name}" class="card-thumb" onerror="this.src='https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=100&q=50'">
+            <img src="${item.card.imageUrl}" alt="${item.card.name}" class="card-thumb" onerror="this.src='${item.card.fallbackImageUrl || 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=100&q=50'}'">
             <div>
               <div class="card-name-title">${item.card.name}</div>
               <div class="card-meta-sub">
@@ -360,9 +361,14 @@ function renderTable() {
           </div>
         </td>
         <td>
-          <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="event.stopPropagation(); openCardDetailModal('${item.card.id}')">
-            鑑定詳細 ➔
-          </button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <a href="${ebayUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 5px 8px; font-size: 0.75rem; text-decoration: none; color: #c084fc; display: inline-flex; align-items: center; gap: 4px;" onclick="event.stopPropagation();" title="eBayで素体(Raw)出品ページを見る">
+              🛒 素体(eBay)
+            </a>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.78rem;" onclick="event.stopPropagation(); openCardDetailModal('${item.card.id}')">
+              鑑定詳細 ➔
+            </button>
+          </div>
         </td>
       `;
     }
@@ -380,20 +386,43 @@ window.openCardDetailModal = function(cardId) {
   const psa = analysis.psaAnalysis;
   const modalContainer = document.getElementById('modalContainer');
 
+  const ebayUrl = card.ebayBuyUrl || `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name + ' japanese raw')}`;
+  const snkrUrl = card.snkrdunkUrl || `https://snkrdunk.com/search?keywords=${encodeURIComponent(card.name)}`;
+  const mercariUrl = card.mercariSoldUrl || `https://jp.mercari.com/search?keyword=${encodeURIComponent(card.name)}&status=sold_out`;
+  const yahooUrl = card.yahooSoldUrl || `https://paypayfleamarket.yahoo.co.jp/search/${encodeURIComponent(card.name)}`;
+
   modalContainer.innerHTML = `
     <div class="modal-overlay" onclick="closeModal(event)">
       <div class="modal-card" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <div style="display: flex; gap: 16px; align-items: center;">
-            <img src="${card.imageUrl}" alt="${card.name}" style="width: 60px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
+          <div style="display: flex; gap: 20px; align-items: center;">
+            <img src="${card.imageUrl}" alt="${card.name}" onerror="this.src='${card.fallbackImageUrl || 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=200&q=80'}'" style="width: 80px; height: 112px; object-fit: contain; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 8px 16px rgba(0,0,0,0.5); background:#0f172a;">
             <div>
-              <div style="display: flex; gap: 8px; align-items: center;">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <span class="badge badge-rank-${analysis.rank.toLowerCase()}">${analysis.rank}判定</span>
                 <span class="badge badge-psa-${psa.psaRank.toLowerCase().replace('psa-', '')}">${psa.psaRank}</span>
                 <span style="font-size: 0.8rem; color: var(--accent-emerald); font-weight: 700;">${psa.psaRecommendation}</span>
               </div>
-              <h2 style="font-size: 1.35rem; font-weight: 800; margin-top: 4px; color: #ffffff;">${card.name}</h2>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">${card.cardSet} (${card.cardNumber}) • ${card.releaseYear}年</div>
+              <h2 style="font-size: 1.45rem; font-weight: 800; margin-top: 6px; color: #ffffff;">${card.name}</h2>
+              <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+                ${card.cardSet} (${card.cardNumber}) • ${card.releaseYear}年
+              </div>
+
+              <!-- 購入・相場確認外部リンクボタン群 -->
+              <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                <a href="${ebayUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none;">
+                  🛒 eBayで素体・出品を見る ↗
+                </a>
+                <a href="${snkrUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none; color: #38bdf8;">
+                  📊 スニダン相場 ↗
+                </a>
+                <a href="${mercariUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none; color: #ef4444;">
+                  🛍️ メルカリ成約 ↗
+                </a>
+                <a href="${yahooUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none; color: #f59e0b;">
+                  📦 ヤフーフリマ ↗
+                </a>
+              </div>
             </div>
           </div>
           <button class="modal-close-btn" onclick="closeModal()">✕</button>
@@ -846,8 +875,8 @@ window.openAddCardModal = function() {
               <input type="number" id="newYahooPrice" class="form-input" placeholder="例: 92000">
             </div>
             <div class="form-group">
-              <label>画像URL (省略時はデフォルト)</label>
-              <input type="text" id="newImageUrl" class="form-input" placeholder="https://...">
+              <label>画像URL (省略時は公式画像)</label>
+              <input type="text" id="newImageUrl" class="form-input" placeholder="https://images.pokemontcg.io/...">
             </div>
           </div>
 
@@ -881,6 +910,11 @@ window.handleCreateCard = function(e) {
     releaseYear: 2024,
     grade,
     imageUrl,
+    fallbackImageUrl: imageUrl,
+    ebayBuyUrl: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(name + ' japanese raw')}&_sop=15`,
+    snkrdunkUrl: `https://snkrdunk.com/search?keywords=${encodeURIComponent(name)}`,
+    mercariSoldUrl: `https://jp.mercari.com/search?keyword=${encodeURIComponent(name)}&status=sold_out`,
+    yahooSoldUrl: `https://paypayfleamarket.yahoo.co.jp/search/${encodeURIComponent(name)}`,
     ebayPriceUsd,
     ebayShippingUsd: 30,
     rawPriceUsd,

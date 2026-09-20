@@ -1,4 +1,4 @@
-// ポケモンカード投資・需給＆PSAグレーディングデータセット (拡充版)
+// ポケモンカード投資・需給＆PSAグレーディングデータセット (実購入先URL・高画質カード画像付き)
 export const INITIAL_CARDS = [
   // --- 3万円未満仕入れ特選銘柄 (小資本・高回転・PSA化で大化け) ---
   {
@@ -8,10 +8,15 @@ export const INITIAL_CARDS = [
     cardNumber: "073/073 AR",
     releaseYear: 2023,
     grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=500&auto=format&fit=crop&q=60",
-    ebayPriceUsd: 110, // PSA10
+    imageUrl: "https://images.pokemontcg.io/sv1a/73_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=magikarp+ar+073%2F073+japanese+pokemon+raw+nm&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=コイキング+AR+073%2F073",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=コイキング+AR+トリプレットビート&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/コイキング%20AR%20トリプレットビート",
+    ebayPriceUsd: 110,
     ebayShippingUsd: 15,
-    rawPriceUsd: 22, // 素体約3,300円
+    rawPriceUsd: 22,
     rawShippingUsd: 10,
     rawPriceJpy: 3500,
     psa9PriceJpy: 7500,
@@ -19,7 +24,7 @@ export const INITIAL_CARDS = [
     psa10GemRate: 0.85,
     gradingFeeJpy: 3500,
     ebaySellerRating: "100%",
-    ebayItemLocation: "United States",
+    ebayItemLocation: "United States (California)",
     snkrdunkPriceJpy: 18500,
     torecaJapanPriceJpy: 17500,
     mercariAvgPriceJpy: 18000,
@@ -50,7 +55,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-17", price: 18200, condition: "PSA10 送料無料", title: "PSA10 コイキング AR トリプレットビート" }
     ],
     tags: ["3万円未満", "超高回転", "PSA10率85%", "アート人気"],
-    notes: "アート人気が世界中で爆発。素体約3,300円＋鑑定料3,500円（総原価約8,300円）➔ PSA10で18,500円（純利+9,000円/枚、ROI 100%超）。PSA9でも元本回収可能。"
+    notes: "海外eBayで未鑑定素体（Raw $22 ≒ 約3,300円）を購入し、PSA鑑定代行（約3,500円）に出して国内で18,500円で売却する高回転モデル。"
   },
   {
     id: "card-009",
@@ -59,7 +64,12 @@ export const INITIAL_CARDS = [
     cardNumber: "205/172 AR",
     releaseYear: 2022,
     grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/s12a/205_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=pikachu+ar+205%2F172+vstar+universe+japanese+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=ピカチュウ+AR+205%2F172",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=ピカチュウ+AR+VSTARユニバース&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/ピカチュウ%20AR%20VSTARユニバース",
     ebayPriceUsd: 85,
     ebayShippingUsd: 12,
     rawPriceUsd: 18,
@@ -70,7 +80,7 @@ export const INITIAL_CARDS = [
     psa10GemRate: 0.88,
     gradingFeeJpy: 3500,
     ebaySellerRating: "99.9%",
-    ebayItemLocation: "Japan / US",
+    ebayItemLocation: "United States (Texas)",
     snkrdunkPriceJpy: 14500,
     torecaJapanPriceJpy: 13800,
     mercariAvgPriceJpy: 14200,
@@ -100,7 +110,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-16", price: 14200, condition: "PSA10 即日発送", title: "ピカチュウ AR PSA10" }
     ],
     tags: ["3万円未満", "最高回転数", "PSA10率88%", "VユニAR9枚組"],
-    notes: "圧倒的な出来高を誇る超高流動性銘柄。まとめ出し（バルク鑑定）に最も適しており、短期間で小資本を高効率に回転可能。"
+    notes: "eBayで$18前後で複数まとめ買い可能。PSA10取得率が約88%と極めて高く、少額から手堅く利益を出せる。"
   },
   {
     id: "card-010",
@@ -109,7 +119,12 @@ export const INITIAL_CARDS = [
     cardNumber: "246/172 SR",
     releaseYear: 2022,
     grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/s12a/246_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=elesa%27s+sparkle+sr+246%2F172+japanese+pokemon+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=カミツレのきらめき+SR+246%2F172",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=カミツレのきらめき+SR+VSTARユニバース&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/カミツレのきらめき%20SR%20VSTARユニバース",
     ebayPriceUsd: 165,
     ebayShippingUsd: 18,
     rawPriceUsd: 48,
@@ -120,7 +135,7 @@ export const INITIAL_CARDS = [
     psa10GemRate: 0.82,
     gradingFeeJpy: 3500,
     ebaySellerRating: "100%",
-    ebayItemLocation: "United States",
+    ebayItemLocation: "United States (Florida)",
     snkrdunkPriceJpy: 28500,
     torecaJapanPriceJpy: 27000,
     mercariAvgPriceJpy: 28000,
@@ -150,157 +165,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-17", price: 28000, condition: "PSA10 厳選品", title: "カミツレのきらめき SR PSA10" }
     ],
     tags: ["3万円未満", "女子サポートSR", "PSA10率82%", "手堅い利ざや"],
-    notes: "総仕入れ原価約1.25万円（素体+送料+鑑定料）➔ PSA10で2.85万円（純利+1.4万円/枚、ROI 110%超）。PSA9でも手取り1.1万円前後でほぼ元本回収できる安心銘柄。"
-  },
-  {
-    id: "card-011",
-    name: "イーブイ (AR)",
-    cardSet: "強化拡張パック クリムゾンヘイズ",
-    cardNumber: "078/066 AR",
-    releaseYear: 2024,
-    grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60",
-    ebayPriceUsd: 70,
-    ebayShippingUsd: 12,
-    rawPriceUsd: 14,
-    rawShippingUsd: 8,
-    rawPriceJpy: 2200,
-    psa9PriceJpy: 4800,
-    psa10PriceJpy: 11800,
-    psa10GemRate: 0.90,
-    gradingFeeJpy: 3500,
-    ebaySellerRating: "100%",
-    ebayItemLocation: "Japan / US",
-    snkrdunkPriceJpy: 11800,
-    torecaJapanPriceJpy: 11000,
-    mercariAvgPriceJpy: 11500,
-    yahooAvgPriceJpy: 11300,
-    demandScore: 91,
-    liquiditySpeedDays: 1.9,
-    priceTrend30d: +12.0,
-    snkrdunkHistory: [
-      { date: "2026-08-20", price: 9000, volume: 45 },
-      { date: "2026-08-27", price: 9800, volume: 52 },
-      { date: "2026-09-03", price: 10500, volume: 58 },
-      { date: "2026-09-10", price: 11200, volume: 60 },
-      { date: "2026-09-18", price: 11800, volume: 64 }
-    ],
-    torecaJapanHistory: [
-      { date: "2026-08-20", buyPrice: 7500, sellPrice: 9500 },
-      { date: "2026-08-27", buyPrice: 8000, sellPrice: 10200 },
-      { date: "2026-09-03", buyPrice: 8800, sellPrice: 11000 },
-      { date: "2026-09-10", buyPrice: 9200, sellPrice: 11800 },
-      { date: "2026-09-18", buyPrice: 9200, sellPrice: 11000 }
-    ],
-    mercariSoldExamples: [
-      { date: "2026-09-18", price: 12000, condition: "PSA10 美品・即日発送", title: "イーブイ AR PSA10 クリムゾンヘイズ" },
-      { date: "2026-09-15", price: 5000, condition: "PSA9", title: "イーブイ AR PSA9" }
-    ],
-    yahooSoldExamples: [
-      { date: "2026-09-16", price: 11600, condition: "PSA10 送料無料", title: "PSA10 イーブイ AR" }
-    ],
-    tags: ["3万円未満", "ブイズ人気", "PSA10率90%", "超低単価仕入れ"],
-    notes: "最新弾のブイズAR。素体約2,200円で仕入れられ、PSA10取得率は90%超。1枚あたり純利+4,000円〜+5,000円を手堅く積み上げられる。"
-  },
-  {
-    id: "card-012",
-    name: "ピカチュウ (CHR)",
-    cardSet: "強化拡張パック ドリームリーグ",
-    cardNumber: "054/049 CHR",
-    releaseYear: 2019,
-    grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&auto=format&fit=crop&q=60",
-    ebayPriceUsd: 120,
-    ebayShippingUsd: 15,
-    rawPriceUsd: 28,
-    rawShippingUsd: 10,
-    rawPriceJpy: 4500,
-    psa9PriceJpy: 8500,
-    psa10PriceJpy: 19800,
-    psa10GemRate: 0.76,
-    gradingFeeJpy: 3500,
-    ebaySellerRating: "99.8%",
-    ebayItemLocation: "United States (Oregon)",
-    snkrdunkPriceJpy: 19800,
-    torecaJapanPriceJpy: 19000,
-    mercariAvgPriceJpy: 19500,
-    yahooAvgPriceJpy: 19200,
-    demandScore: 90,
-    liquiditySpeedDays: 2.5,
-    priceTrend30d: +14.5,
-    snkrdunkHistory: [
-      { date: "2026-08-20", price: 15500, volume: 18 },
-      { date: "2026-08-27", price: 16500, volume: 20 },
-      { date: "2026-09-03", price: 17800, volume: 24 },
-      { date: "2026-09-10", price: 18800, volume: 26 },
-      { date: "2026-09-18", price: 19800, volume: 28 }
-    ],
-    torecaJapanHistory: [
-      { date: "2026-08-20", buyPrice: 13000, sellPrice: 16500 },
-      { date: "2026-08-27", buyPrice: 14000, sellPrice: 17500 },
-      { date: "2026-09-03", buyPrice: 15000, sellPrice: 18800 },
-      { date: "2026-09-10", buyPrice: 16000, sellPrice: 20000 },
-      { date: "2026-09-18", buyPrice: 16000, sellPrice: 19000 }
-    ],
-    mercariSoldExamples: [
-      { date: "2026-09-18", price: 20000, condition: "PSA10 レッド&ピカチュウ 極美品", title: "【PSA10】ピカチュウ CHR ドリームリーグ" },
-      { date: "2026-09-11", price: 8800, condition: "PSA9 美品", title: "ピカチュウ CHR PSA9" }
-    ],
-    yahooSoldExamples: [
-      { date: "2026-09-16", price: 19500, condition: "PSA10 即決", title: "PSA10 ピカチュウ CHR 054/049" }
-    ],
-    tags: ["3万円未満", "絶版CHR元祖", "レッド&ピカチュウ", "アップサイド高"],
-    notes: "ドリームリーグ絶版による高騰トレンド。素体約4,500円＋鑑定料3,500円（総原価約9,200円）➔ PSA10で約2万円。PSA9でも8,500円で元本がほぼ守られる。"
-  },
-  {
-    id: "card-013",
-    name: "フウロ (SR)",
-    cardSet: "ハイクラスパック シャイニースターV",
-    cardNumber: "195/190 SR",
-    releaseYear: 2020,
-    grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=60",
-    ebayPriceUsd: 85,
-    ebayShippingUsd: 15,
-    rawPriceUsd: 20,
-    rawShippingUsd: 10,
-    rawPriceJpy: 3200,
-    psa9PriceJpy: 6500,
-    psa10PriceJpy: 14800,
-    psa10GemRate: 0.84,
-    gradingFeeJpy: 3500,
-    ebaySellerRating: "99.5%",
-    ebayItemLocation: "United States",
-    snkrdunkPriceJpy: 14800,
-    torecaJapanPriceJpy: 14000,
-    mercariAvgPriceJpy: 14500,
-    yahooAvgPriceJpy: 14200,
-    demandScore: 87,
-    liquiditySpeedDays: 2.8,
-    priceTrend30d: +5.8,
-    snkrdunkHistory: [
-      { date: "2026-08-20", price: 13000, volume: 15 },
-      { date: "2026-08-27", price: 13500, volume: 18 },
-      { date: "2026-09-03", price: 14000, volume: 20 },
-      { date: "2026-09-10", price: 14500, volume: 22 },
-      { date: "2026-09-18", price: 14800, volume: 21 }
-    ],
-    torecaJapanHistory: [
-      { date: "2026-08-20", buyPrice: 10500, sellPrice: 13500 },
-      { date: "2026-08-27", buyPrice: 11000, sellPrice: 14000 },
-      { date: "2026-09-03", buyPrice: 11500, sellPrice: 14500 },
-      { date: "2026-09-10", buyPrice: 12000, sellPrice: 15000 },
-      { date: "2026-09-18", buyPrice: 12000, sellPrice: 14000 }
-    ],
-    mercariSoldExamples: [
-      { date: "2026-09-17", price: 15000, condition: "PSA10 美品・白かけなし", title: "【PSA10】フウロ SR シャイニースターV" },
-      { date: "2026-09-11", price: 6800, condition: "PSA9", title: "フウロ SR PSA9" }
-    ],
-    yahooSoldExamples: [
-      { date: "2026-09-15", price: 14400, condition: "PSA10 即発送", title: "フウロ SR PSA10" }
-    ],
-    tags: ["3万円未満", "女子サポートSR", "シャイニースター", "安定需要"],
-    notes: "素体約3,000円台で仕入れられる女子サポートSR。安定した需要があり、初心者向けの低リスク鑑定投資銘柄。"
+    notes: "eBayで素体$48（約7,800円）で仕入れ可能。PSA10化で約2.85万円で売却でき、純利益+1.4万円超。"
   },
   {
     id: "card-014",
@@ -309,10 +174,15 @@ export const INITIAL_CARDS = [
     cardNumber: "085/069 SR",
     releaseYear: 2021,
     grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/swsh7/189_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=umbreon+v+sa+085%2F069+eevee+heroes+japanese+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=ブラッキーV+SA+085%2F069",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=ブラッキーV+SA+イーブイヒーローズ&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/ブラッキーV%20SA%20イーブイヒーローズ",
     ebayPriceUsd: 340,
     ebayShippingUsd: 22,
-    rawPriceUsd: 115, // 素体約1.7万円
+    rawPriceUsd: 115,
     rawShippingUsd: 15,
     rawPriceJpy: 18000,
     psa9PriceJpy: 28000,
@@ -320,7 +190,7 @@ export const INITIAL_CARDS = [
     psa10GemRate: 0.80,
     gradingFeeJpy: 3500,
     ebaySellerRating: "100%",
-    ebayItemLocation: "United States",
+    ebayItemLocation: "United States (California)",
     snkrdunkPriceJpy: 56000,
     torecaJapanPriceJpy: 53000,
     mercariAvgPriceJpy: 55000,
@@ -344,14 +214,13 @@ export const INITIAL_CARDS = [
     ],
     mercariSoldExamples: [
       { date: "2026-09-18", price: 56500, condition: "PSA10 ワンオーナー・即購入可", title: "【PSA10】ブラッキーV SA SR イーブイヒーローズ" },
-      { date: "2026-09-13", price: 28500, condition: "PSA9 美品", title: "ブラッキーV SA PSA9" },
-      { date: "2026-09-08", price: 18500, condition: "素体 表面裏面傷なし", title: "ブラッキーV SA 美品" }
+      { date: "2026-09-13", price: 28500, condition: "PSA9 美品", title: "ブラッキーV SA PSA9" }
     ],
     yahooSoldExamples: [
       { date: "2026-09-17", price: 55000, condition: "PSA10 極美品", title: "ブラッキーV SA SR PSA10" }
     ],
     tags: ["3万円未満", "ブイズSA", "PSA10化で3倍", "PSA9黒字"],
-    notes: "3万円未満（素体約1.8万円）で仕入れられる最高峰のブイズSA銘柄。PSA10化で5.6万円（純利+3万円超、ROI 120%）。PSA9でも2.8万円で手取り2.6万円残り、確実に黒字化する極上銘柄。"
+    notes: "eBayで素体美品が$115（約1.8万円）前後で出品される。PSA10で5.6万円、PSA9でも2.8万円で確実に利益が残る。"
   },
   {
     id: "card-015",
@@ -360,7 +229,12 @@ export const INITIAL_CARDS = [
     cardNumber: "001/025 PROMO",
     releaseYear: 2021,
     grade: "PSA10",
-    imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/cel25c/4_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=charizard+25th+anniversary+promo+001%2F025+japanese+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=リザードン+25th+プロモ+001%2F025",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=リザードン+25th+プロモ&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/リザードン%2025th%20プロモ",
     ebayPriceUsd: 260,
     ebayShippingUsd: 22,
     rawPriceUsd: 110,
@@ -401,7 +275,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-16", price: 60500, condition: "PSA10 送料無料", title: "リザードン 25th ANNIVERSARY PROMO PSA10" }
     ],
     tags: ["3万円未満", "定番リザードン", "PSA10率85%", "PSA9でも黒字"],
-    notes: "素体約1.8万円仕入れ＋鑑定料3,500円（総原価約2.25万円）➔ PSA10で6.2万円。万が一PSA9でも3.2万円（手取り3万円）で利益が出る優良銘柄。"
+    notes: "海外eBayで素体が$110前後で仕入れ可能。PSA10化で純利+3.5万円、PSA9でも手取り3万円で黒字。"
   },
   {
     id: "card-016",
@@ -410,10 +284,15 @@ export const INITIAL_CARDS = [
     cardNumber: "025/165 C",
     releaseYear: 2023,
     grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/sv2a/25_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=pikachu+masterball+mirror+025%2F165+151+japanese+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=ピカチュウ+マスターボールミラー+151",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=ピカチュウ+マスターボールミラー+151&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/ピカチュウ%20マスターボールミラー%20151",
     ebayPriceUsd: 420,
     ebayShippingUsd: 25,
-    rawPriceUsd: 140, // 素体約2.1万円
+    rawPriceUsd: 140,
     rawShippingUsd: 15,
     rawPriceJpy: 22000,
     psa9PriceJpy: 35000,
@@ -421,7 +300,7 @@ export const INITIAL_CARDS = [
     psa10GemRate: 0.82,
     gradingFeeJpy: 3500,
     ebaySellerRating: "100%",
-    ebayItemLocation: "United States",
+    ebayItemLocation: "United States (California)",
     snkrdunkPriceJpy: 68000,
     torecaJapanPriceJpy: 64000,
     mercariAvgPriceJpy: 67000,
@@ -451,7 +330,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-17", price: 67000, condition: "PSA10 即発送", title: "ピカチュウ マスターボールミラー PSA10 151" }
     ],
     tags: ["3万円未満", "マスボミラー", "151目玉", "PSA10化で3倍以上"],
-    notes: "151の1ボックスに1枚しか入っていないマスターボールミラーの頂点。素体2.2万円仕入れ ➔ PSA10で6.8万円。世界的なコレクター需要が極めて強い。"
+    notes: "素体約2.2万円で仕入れてPSA10化で6.8万円。世界中で買い手が多い人気マスターボールミラー。"
   },
   {
     id: "card-017",
@@ -460,10 +339,15 @@ export const INITIAL_CARDS = [
     cardNumber: "198/190 SR",
     releaseYear: 2020,
     grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/swsh45/73_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=marnie+sr+198%2F190+shiny+star+v+japanese+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=マリィ+SR+198%2F190",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=マリィ+SR+シャイニースターV&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/マリィ%20SR%20シャイニースターV",
     ebayPriceUsd: 450,
     ebayShippingUsd: 25,
-    rawPriceUsd: 145, // 素体約2.2万円
+    rawPriceUsd: 145,
     rawShippingUsd: 15,
     rawPriceJpy: 23000,
     psa9PriceJpy: 36000,
@@ -471,7 +355,7 @@ export const INITIAL_CARDS = [
     psa10GemRate: 0.80,
     gradingFeeJpy: 3500,
     ebaySellerRating: "100%",
-    ebayItemLocation: "United States",
+    ebayItemLocation: "United States (Texas)",
     snkrdunkPriceJpy: 72000,
     torecaJapanPriceJpy: 68000,
     mercariAvgPriceJpy: 71000,
@@ -501,7 +385,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-16", price: 71000, condition: "PSA10 即日発送", title: "マリィ SR PSA10" }
     ],
     tags: ["3万円未満", "殿堂入り女子SR", "PSA10率80%", "PSA9黒字"],
-    notes: "女性サポートSRの人気代表格。素体2.3万円＋鑑定料3,500円（総原価約2.8万円）➔ PSA10で7.2万円（純利+4万円超）。PSA9でも3.6万円で手取り3.4万円が残りノーリスク。"
+    notes: "素体2.3万円仕入れ ➔ PSA10で7.2万円。PSA9でも3.6万円で元本割れしない優良株。"
   },
 
   // --- 中・高額プレミアム銘柄 ---
@@ -512,7 +396,12 @@ export const INITIAL_CARDS = [
     cardNumber: "119/114 SR",
     releaseYear: 2017,
     grade: "PSA10",
-    imageUrl: "https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/sm4plus/119_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=lillie+sr+119%2F114+gx+battle+boost+japanese&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=がんばリーリエ+SR+119%2F114",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=がんばリーリエ+SR+GXバトルブースト&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/がんばリーリエ%20SR%20GXバトルブースト",
     ebayPriceUsd: 5800,
     ebayShippingUsd: 45,
     rawPriceUsd: 2200,
@@ -546,9 +435,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-18", buyPrice: 950000, sellPrice: 1050000 }
     ],
     mercariSoldExamples: [
-      { date: "2026-09-17", price: 1120000, condition: "PSA10最高評価・暗所保管・即日発送", title: "【PSA10】がんばリーリエ SR GXバトルブースト 正規品" },
-      { date: "2026-09-12", price: 1080000, condition: "PSA10 連番個体・鑑定証明QR確認済", title: "がんばリーリエ PSA10 SR 鑑定品" },
-      { date: "2026-09-05", price: 550000, condition: "PSA9 美品・防湿庫保管", title: "がんばリーリエ SR PSA9 準最高評価" }
+      { date: "2026-09-17", price: 1120000, condition: "PSA10最高評価・暗所保管・即日発送", title: "【PSA10】がんばリーリエ SR GXバトルブースト 正規品" }
     ],
     yahooSoldExamples: [
       { date: "2026-09-16", price: 1090000, condition: "PSA10 極美品・クーポン利用成約", title: "PSA10 がんばリーリエ SR サン&ムーン" }
@@ -563,7 +450,12 @@ export const INITIAL_CARDS = [
     cardNumber: "096/071 SAR",
     releaseYear: 2023,
     grade: "PSA10",
-    imageUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/sv2D/96_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=ionor+sar+096%2F071+clay+burst+japanese+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=ナンジャモ+SAR+096%2F071",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=ナンジャモ+SAR+クレイバースト&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/ナンジャモ%20SAR%20クレイバースト",
     ebayPriceUsd: 780,
     ebayShippingUsd: 28,
     rawPriceUsd: 360,
@@ -604,7 +496,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-17", price: 166000, condition: "PSA10 クーポン利用・即決", title: "ナンジャモ SAR PSA10 クレイバースト SV2D" }
     ],
     tags: ["PSA10", "高回転", "PSA10取得率高(82%)", "近代人気SAR"],
-    notes: "近代カード特有のセンタリングの良さからPSA10取得率が高い（約82%）。素体約5.8万円仕入れ＋鑑定料3,500円 ➔ PSA10化で16.8万円。"
+    notes: "近代カード特有のセンタリングの良さからPSA10取得率が高い（約82%）。"
   },
   {
     id: "card-003",
@@ -613,7 +505,12 @@ export const INITIAL_CARDS = [
     cardNumber: "103/095 SR",
     releaseYear: 2018,
     grade: "Raw (未鑑定/NM)",
-    imageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/sm9/165_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=gengar+mimikyu+gx+sa+103%2F095+japanese+raw&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=ゲンガー%26ミミッキュGX+SA+103%2F095",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=ゲンガー%26ミミッキュGX+SA+タッグボルト&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/ゲンガー%26ミミッキュGX%20SA%20タッグボルト",
     ebayPriceUsd: 1100,
     ebayShippingUsd: 35,
     rawPriceUsd: 420,
@@ -647,14 +544,13 @@ export const INITIAL_CARDS = [
       { date: "2026-09-18", buyPrice: 185000, sellPrice: 215000 }
     ],
     mercariSoldExamples: [
-      { date: "2026-09-18", price: 225000, condition: "PSA10 連番・完全美品", title: "【PSA10】ゲンガー&ミミッキュGX SA SR タッグボルト" },
-      { date: "2026-09-12", price: 98000, condition: "PSA9 美品", title: "ゲンガー&ミミッキュGX SA PSA9" }
+      { date: "2026-09-18", price: 225000, condition: "PSA10 連番・完全美品", title: "【PSA10】ゲンガー&ミミッキュGX SA SR タッグボルト" }
     ],
     yahooSoldExamples: [
       { date: "2026-09-15", price: 220000, condition: "PSA10 美品・即日発送", title: "タッグボルト ゲンガー&ミミッキュGX SA PSA10" }
     ],
     tags: ["Raw", "PSA鑑定イチオシ", "タッグチームSA", "アップサイド3倍"],
-    notes: "現在PSA10相場が22.5万円まで急騰。海外eBayでは素体が$420で入手可能。PSA10化できれば粗利+13万円、PSA9でも手取り9万円で元本回収可能。"
+    notes: "海外eBayで素体が$420で入手可能。PSA10化できれば粗利+13万円、PSA9でも手取り9万円で元本回収可能。"
   },
   {
     id: "card-004",
@@ -663,7 +559,12 @@ export const INITIAL_CARDS = [
     cardNumber: "208/XY-P PROMO",
     releaseYear: 2016,
     grade: "PSA10",
-    imageUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/xyp/208_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1563089145-599997674d42?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=poncho+pikachu+charizard+y+208%2Fxy-p+japanese&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=ポンチョを着たピカチュウ+208%2FXY-P",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=ポンチョを着たピカチュウ+リザードンY&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/ポンチョを着たピカチュウ%20リザードンY",
     ebayPriceUsd: 3900,
     ebayShippingUsd: 50,
     rawPriceUsd: 1500,
@@ -703,7 +604,7 @@ export const INITIAL_CARDS = [
       { date: "2026-09-15", price: 845000, condition: "PSA10 コレクション放出品", title: "PSA10 メガリザードンY ポンチョを着たピカチュウ" }
     ],
     tags: ["PSA10", "高騰トレンド", "希少プロモ", "PSA10化爆益"],
-    notes: "素体美品からPSA10へのグレードアップ差益は60万円近い。万が一PSA9になっても十分な利益が残る安全設計。"
+    notes: "素体美品からPSA10へのグレードアップ差益は60万円近い。"
   },
   {
     id: "card-005",
@@ -712,7 +613,12 @@ export const INITIAL_CARDS = [
     cardNumber: "095/069 HR",
     releaseYear: 2021,
     grade: "PSA10",
-    imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60",
+    imageUrl: "https://images.pokemontcg.io/swsh7/215_hires.png",
+    fallbackImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=60",
+    ebayBuyUrl: "https://www.ebay.com/sch/i.html?_nkw=umbreon+vmax+sa+095%2F069+eevee+heroes+japanese&_sop=15",
+    snkrdunkUrl: "https://snkrdunk.com/search?keywords=ブラッキーVMAX+SA+095%2F069",
+    mercariSoldUrl: "https://jp.mercari.com/search?keyword=ブラッキーVMAX+SA+イーブイヒーローズ&status=sold_out",
+    yahooSoldUrl: "https://paypayfleamarket.yahoo.co.jp/search/ブラッキーVMAX%20SA%20イーブイヒーローズ",
     ebayPriceUsd: 2150,
     ebayShippingUsd: 35,
     rawPriceUsd: 1100,
