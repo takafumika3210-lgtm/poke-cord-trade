@@ -41,7 +41,11 @@
             <span>¥</span>
             <input type="number" id="usdJpyRateInput" class="rate-input" step="0.5" value="150.0">
           </div>
+          <button id="refreshRateBtn" class="btn-rate-refresh" title="open.er-api.com から最新USD/JPYを取得して全銘柄を再計算します">
+            🔄 レート更新
+          </button>
         </div>
+        <div id="rateFetchedAt" class="rate-fetched-badge" style="display:none;"></div>
 
         <button id="openSimulatorBtn" class="btn btn-secondary">
           ⚡ 投資・PSAシミュレーター
@@ -52,6 +56,26 @@
         </button>
       </div>
     </header>
+
+    <!-- データ更新日時・免責バナー -->
+    <div id="dataBanner" class="data-banner glass-panel">
+      <div class="data-banner-inner">
+        <div class="data-banner-left">
+          <span class="data-banner-icon">📅</span>
+          <div>
+            <div class="data-banner-title">価格データ最終更新: <span id="dataUpdatedAtLabel">2026年9月20日</span></div>
+            <div class="data-banner-sub">
+              素体価格 = <b>eBay completed listings 参照</b> &nbsp;|&nbsp;
+              PSA10/9価格 = <b>スニーカーダンク 成約相場 参照</b> &nbsp;|&nbsp;
+              鑑定料 = <b>PSA Japan エコノミー ¥3,500</b>
+            </div>
+          </div>
+        </div>
+        <div class="data-banner-right">
+          <span class="data-banner-warning">⚠️ 表示価格はすべて参考値です。実際の購入前に<a href="https://www.ebay.com" target="_blank" rel="noopener noreferrer" style="color:#38bdf8;">eBay</a>・<a href="https://snkrdunk.com" target="_blank" rel="noopener noreferrer" style="color:#38bdf8;">スニダン</a>で必ずご確認ください。</span>
+        </div>
+      </div>
+    </div>
 
     <!-- Strategy Mode Tabs -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">

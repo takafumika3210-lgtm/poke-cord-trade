@@ -152,6 +152,78 @@ body {
   font-size: 0.875rem;
 }
 
+/* 為替レート更新ボタン */
+.btn-rate-refresh {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-rate-refresh:hover {
+  background: rgba(56, 189, 248, 0.28);
+}
+.btn-rate-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 為替取得済みバッジ */
+.rate-fetched-badge {
+  font-size: 0.72rem;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+/* データ最終更新・免責バナー */
+.data-banner {
+  padding: 12px 20px;
+  border-radius: 12px;
+}
+.data-banner-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.data-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.data-banner-icon {
+  font-size: 1.4rem;
+}
+.data-banner-title {
+  font-size: 0.83rem;
+  color: #ffffff;
+  font-weight: 700;
+}
+.data-banner-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.data-banner-right {
+  font-size: 0.74rem;
+}
+.data-banner-warning {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+
 .rate-pill label {
   color: var(--text-secondary);
   font-weight: 500;

@@ -3,6 +3,22 @@
  */
 
 /**
+ * open.er-api.com の無料APIからUSD/JPYの最新為替レートを取得する
+ * @returns {Promise<{rate: number, fetchedAt: string}>}
+ */
+export async function fetchLatestExchangeRate() {
+  const res = await fetch("https://open.er-api.com/v6/latest/USD");
+  if (!res.ok) throw new Error("為替レート取得に失敗しました (HTTP " + res.status + ")");
+  const json = await res.json();
+  const rate = json.rates && json.rates.JPY;
+  if (!rate) throw new Error("JPYレートが取得できませんでした");
+  return {
+    rate: Math.round(rate * 100) / 100, // 小数2桁に丸める
+    fetchedAt: new Date().toLocaleString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+  };
+}
+
+/**
  * eBay仕入れ総費用（本体＋国際送料＋輸入消費税）を計算
  */
 export function calculateImportCost(ebayPriceUsd, ebayShippingUsd, settings) {

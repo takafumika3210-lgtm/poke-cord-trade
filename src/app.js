@@ -1,5 +1,11 @@
-import { INITIAL_CARDS, DEFAULT_SETTINGS } from './data.js';
-import { calculateImportCost, calculateDomesticSaleProfit, analyzeCardInvestment, analyzePsaGradingStrategy } from './engine.js';
+import { INITIAL_CARDS, DEFAULT_SETTINGS, DATA_META } from './data.js';
+import { 
+  calculateImportCost, 
+  calculateDomesticSaleProfit, 
+  analyzeCardInvestment, 
+  analyzePsaGradingStrategy,
+  fetchLatestExchangeRate
+} from './engine.js';
 
 let state = {
   cards: INITIAL_CARDS,
@@ -28,12 +34,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initApp() {
+  // データ最終更新日のバナー反映
+  const updatedAtEl = document.getElementById('dataUpdatedAtLabel');
+  if (updatedAtEl && DATA_META) {
+    updatedAtEl.textContent = `${DATA_META.cardDataUpdatedAt} 時点 (参考相場)`;
+  }
+
   setupEventListeners();
   renderApp();
 }
 
 function setupEventListeners() {
-  // 為替レート変更
+  // 為替レート手動変更
   const rateInput = document.getElementById('usdJpyRateInput');
   if (rateInput) {
     rateInput.value = state.settings.usdJpyRate;
@@ -43,6 +55,39 @@ function setupEventListeners() {
         state.settings.usdJpyRate = val;
         localStorage.setItem('poke_settings', JSON.stringify(state.settings));
         renderApp();
+      }
+    });
+  }
+
+  // 為替レート「更新」ボタン (APIから最新レート取得)
+  const refreshRateBtn = document.getElementById('refreshRateBtn');
+  const rateFetchedBadge = document.getElementById('rateFetchedAt');
+  if (refreshRateBtn) {
+    refreshRateBtn.addEventListener('click', async () => {
+      const originalText = refreshRateBtn.textContent;
+      refreshRateBtn.textContent = '⏳ 取得中...';
+      refreshRateBtn.disabled = true;
+
+      try {
+        const { rate, fetchedAt } = await fetchLatestExchangeRate();
+        state.settings.usdJpyRate = rate;
+        localStorage.setItem('poke_settings', JSON.stringify(state.settings));
+
+        if (rateInput) {
+          rateInput.value = rate;
+        }
+
+        if (rateFetchedBadge) {
+          rateFetchedBadge.style.display = 'inline-block';
+          rateFetchedBadge.textContent = `✅ ${fetchedAt} 最新為替 ¥${rate}/$ 適用済`;
+        }
+
+        renderApp();
+      } catch (err) {
+        alert('為替レートの取得に失敗しました。ネットワーク接続を確認するか、手動で入力してください。\n(' + err.message + ')');
+      } finally {
+        refreshRateBtn.textContent = originalText;
+        refreshRateBtn.disabled = false;
       }
     });
   }
@@ -191,7 +236,7 @@ function renderTableHeader() {
       <tr>
         <th>鑑定推奨</th>
         <th>カード情報 / 素体</th>
-        <th>eBay素体供給 / 鑑定総原価</th>
+        <th>素体仕入れ＋鑑定総原価 (内訳・相場)</th>
         <th>国内需給 (PSA10/9 成約力)</th>
         <th>PSA10化 売価 / 純利</th>
         <th>PSA9化 売価 / 純利</th>
@@ -241,18 +286,18 @@ function renderTable() {
   // ソート処理
   analyzed.sort((a, b) => {
     if (state.sortBy === 'liquidity') {
-      const aRate = a.card.domesticMarketLiquidity ? a.card.domesticMarketLiquidity.sellThroughRate : 0;
-      const bRate = b.card.domesticMarketLiquidity ? b.card.domesticMarketLiquidity.sellThroughRate : 0;
+      const aRate = a.card.domesticMarketLiquidity ? a.card.domesticMarketLiquidity.sellThroughRate : (a.liquidity ? a.liquidity.sellThroughRate : 0);
+      const bRate = b.card.domesticMarketLiquidity ? b.card.domesticMarketLiquidity.sellThroughRate : (b.liquidity ? b.liquidity.sellThroughRate : 0);
       return bRate - aRate;
     }
     if (state.sortBy === 'sold_count') {
-      const aSold = a.card.domesticMarketLiquidity ? a.card.domesticMarketLiquidity.weeklySoldCount : 0;
-      const bSold = b.card.domesticMarketLiquidity ? b.card.domesticMarketLiquidity.weeklySoldCount : 0;
+      const aSold = a.card.domesticMarketLiquidity ? a.card.domesticMarketLiquidity.weeklySoldCount : (a.liquidity ? a.liquidity.sold7d : 0);
+      const bSold = b.card.domesticMarketLiquidity ? b.card.domesticMarketLiquidity.weeklySoldCount : (b.liquidity ? b.liquidity.sold7d : 0);
       return bSold - aSold;
     }
     if (state.sortBy === 'ebay_supply') {
-      const aSupply = a.card.supplyStatus ? a.card.supplyStatus.ebayActiveListings : 0;
-      const bSupply = b.card.supplyStatus ? b.card.supplyStatus.ebayActiveListings : 0;
+      const aSupply = a.card.supplyStatus ? a.card.supplyStatus.ebayActiveListings : (a.liquidity ? a.liquidity.ebayActiveListings : 0);
+      const bSupply = b.card.supplyStatus ? b.card.supplyStatus.ebayActiveListings : (b.liquidity ? b.liquidity.ebayActiveListings : 0);
       return bSupply - aSupply;
     }
 
@@ -283,8 +328,17 @@ function renderTable() {
 
     const isUnder30k = (state.activeTab === 'arbitrage' ? item.importCost.totalCostJpy : item.psaAnalysis.totalGradedCostJpy) < 30000;
     const ebayUrl = item.card.ebayBuyUrl || `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(item.card.name + ' japanese pokemon raw')}`;
-    const liq = item.card.domesticMarketLiquidity || { weeklySoldCount: 15, activeListingCount: 20, sellThroughRate: 75.0, estimatedDaysToSell: 3.0 };
-    const supply = item.card.supplyStatus || { ebayActiveListings: 10, supplyRating: '充足', isReadilyAvailable: true };
+    const liq = item.card.domesticMarketLiquidity || { 
+      weeklySoldCount: item.liquidity.sold7d || 15, 
+      activeListingCount: item.liquidity.activeListings || 20, 
+      sellThroughRate: item.liquidity.sellThroughRate || 75.0, 
+      estimatedDaysToSell: item.liquidity.turnoverDays || 3.0 
+    };
+    const supply = item.card.supplyStatus || { 
+      ebayActiveListings: item.liquidity.ebayActiveListings || 10, 
+      supplyRating: item.liquidity.ebaySupplyStatus || '充足', 
+      isReadilyAvailable: true 
+    };
 
     if (state.activeTab === 'arbitrage') {
       const rankBadgeClass = `badge-rank-${item.rank.toLowerCase()}`;
@@ -321,7 +375,7 @@ function renderTable() {
             <div style="font-size: 0.74rem; color: ${isUnder30k ? '#38bdf8' : 'var(--text-muted)'}; font-weight: ${isUnder30k ? '700' : 'normal'};">
               総原価: ${formatJpy(item.importCost.totalCostJpy)}
             </div>
-            <div style="font-size: 0.72rem; color: ${supply.supplyRating === '充足' ? '#34d399' : '#fbbf24'}; font-weight: 600;">
+            <div style="font-size: 0.72rem; color: ${supply.supplyRating.includes('潤沢') || supply.supplyRating === '充足' ? '#34d399' : '#fbbf24'}; font-weight: 600;">
               🛒 eBay出品: ${supply.ebayActiveListings}件 (${supply.supplyRating})
             </div>
           </div>
@@ -375,8 +429,10 @@ function renderTable() {
           <div style="font-weight: 700; color: ${isUnder30k ? '#38bdf8' : '#ffffff'}; font-size: 0.95rem;">
             ${formatJpy(psa.totalGradedCostJpy)}
           </div>
-          <div style="font-size: 0.72rem; color: var(--text-muted);">素体$${psa.rawPriceUsd} + 鑑定料${formatJpy(psa.gradingFeeJpy)}</div>
-          <div style="font-size: 0.72rem; color: #34d399; font-weight: 600; margin-top: 2px;">
+          <div style="font-size: 0.71rem; color: var(--text-muted); line-height: 1.3; margin-top: 2px;">
+            素体$${psa.rawPriceUsd} + 送料$${psa.rawShippingUsd} + 鑑定料${formatJpy(psa.gradingFeeJpy)}
+          </div>
+          <div style="font-size: 0.70rem; color: #34d399; font-weight: 600; margin-top: 2px;">
             🛒 素体出品: ${supply.ebayActiveListings}件 (${supply.supplyRating})
           </div>
         </td>
@@ -436,18 +492,18 @@ window.openCardDetailModal = function(cardId) {
   const yahooUrl = card.yahooSoldUrl || `https://paypayfleamarket.yahoo.co.jp/search/${encodeURIComponent(card.name)}`;
 
   const liq = card.domesticMarketLiquidity || {
-    weeklySoldCount: 15,
-    activeListingCount: 20,
-    sellThroughRate: 75.0,
-    estimatedDaysToSell: 3.0,
+    weeklySoldCount: analysis.liquidity.sold7d || 15,
+    activeListingCount: analysis.liquidity.activeListings || 20,
+    sellThroughRate: analysis.liquidity.sellThroughRate || 75.0,
+    estimatedDaysToSell: analysis.liquidity.turnoverDays || 3.0,
     priceRangeMin: card.snkrdunkPriceJpy * 0.95,
     priceRangeMax: card.snkrdunkPriceJpy * 1.05
   };
 
   const supply = card.supplyStatus || {
-    ebayActiveListings: 10,
-    ebayRecentSoldCount: 12,
-    supplyRating: '充足',
+    ebayActiveListings: analysis.liquidity.ebayActiveListings || 10,
+    ebayRecentSoldCount: analysis.liquidity.ebaySold7d || 12,
+    supplyRating: analysis.liquidity.ebaySupplyStatus || '充足',
     isReadilyAvailable: true
   };
 
@@ -486,6 +542,58 @@ window.openCardDetailModal = function(cardId) {
             </div>
           </div>
           <button class="modal-close-btn" onclick="closeModal()">✕</button>
+        </div>
+
+        <!-- 【ユーザー疑問解消】素体仕入れ＋鑑定総原価の算出根拠・内訳解説パネル -->
+        <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 14px; padding: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+            <div style="font-size: 0.92rem; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 6px;">
+              💡 「素体仕入れ＋鑑定総原価 (${formatJpy(psa.totalGradedCostJpy)})」の算出内訳と根拠
+            </div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; background: rgba(15, 23, 42, 0.8); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+              📅 基準日付: <strong style="color:#38bdf8;">2026年9月20日時点</strong>のeBay落札参考相場 (為替1ドル=¥${state.settings.usdJpyRate})
+            </div>
+          </div>
+
+          <!-- コスト内訳ステップ -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px;">
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">① 素体本体価格 (eBay)</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin: 2px 0;">${formatUsd(psa.rawPriceUsd)}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted);">${formatJpy(psa.rawImportCost.itemCostJpy)} (未鑑定・美品NM基準)</div>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">② 国際送料 (米国➔日本)</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin: 2px 0;">${formatUsd(psa.rawShippingUsd)}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted);">${formatJpy(psa.rawImportCost.shippingCostJpy)} (追跡付通常配送)</div>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">③ 輸入消費税</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin: 2px 0;">${formatJpy(psa.rawImportCost.importTaxJpy)}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted);">${psa.rawImportCost.importTaxJpy > 0 ? '課税ベース(60%)×10%' : '¥16,666以下免税特例(0円)'}</div>
+            </div>
+
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">④ PSA鑑定代行料</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: #c084fc; margin: 2px 0;">${formatJpy(psa.gradingFeeJpy)}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted);">PSA日本支社 エコノミープラン</div>
+            </div>
+          </div>
+
+          <!-- インライン再試算フォーム -->
+          <div style="background: rgba(30, 41, 59, 0.6); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="font-size: 0.8rem; color: #e2e8f0;">
+              <strong>🔍 今見つけたeBayの素体価格でリアルタイム再試算:</strong>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">現在の出品価格を入力すると、即座に総原価と純利益・ROIを再計算します</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.85rem; font-weight: 700; color: #38bdf8;">$</span>
+              <input type="number" id="quickRawPriceInput" value="${psa.rawPriceUsd}" style="width: 80px; padding: 6px 10px; background: #0f172a; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #ffffff; font-weight: 700;" step="1" oninput="quickRecalcModal('${card.id}')">
+              <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="resetQuickPrice('${card.id}')">リセット</button>
+            </div>
+          </div>
         </div>
 
         <!-- 需給・流動性＆仕入れ供給 パネル -->
@@ -534,7 +642,7 @@ window.openCardDetailModal = function(cardId) {
               </div>
               <div>
                 <div style="font-size: 0.72rem; color: var(--text-secondary);">供給評価</div>
-                <div style="font-size: 1.15rem; font-weight: 800; color: ${supply.supplyRating === '充足' ? '#34d399' : '#fbbf24'};">${supply.supplyRating}</div>
+                <div style="font-size: 1.15rem; font-weight: 800; color: ${supply.supplyRating.includes('潤沢') || supply.supplyRating === '充足' ? '#34d399' : '#fbbf24'};">${supply.supplyRating}</div>
               </div>
               <div>
                 <div style="font-size: 0.72rem; color: var(--text-secondary);">仕入れ難易度</div>
@@ -551,25 +659,25 @@ window.openCardDetailModal = function(cardId) {
         <div class="psa-matrix-card">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <h3 style="font-size: 0.95rem; color: #c084fc; font-weight: 800; display: flex; align-items: center; gap: 6px;">
-              💎 PSA鑑定投資（素体仕入れ ➔ PSA10/9 化）シミュレーション
+              💎 PSA鑑定投資（素体仕入れ ➔ PSA10/9 化）損益シミュレーション
             </h3>
             <span style="font-size: 0.78rem; color: #e2e8f0; background: rgba(168, 85, 247, 0.2); padding: 3px 8px; border-radius: 6px; font-weight: 700;">
-              アップサイド倍率: ${psa.upsideMultiplier}倍
+              アップサイド倍率: <span id="modalUpsideVal">${psa.upsideMultiplier}</span>倍
             </span>
           </div>
 
           <div class="psa-matrix-grid">
             <div class="market-box">
               <div class="market-title">① 素体仕入れ＋鑑定総原価</div>
-              <div class="market-price">${formatJpy(psa.totalGradedCostJpy)}</div>
-              <div class="market-net">素体: $${psa.rawPriceUsd} (${formatJpy(psa.rawImportCost.totalCostJpy)}) + 鑑定料: ${formatJpy(psa.gradingFeeJpy)}</div>
+              <div class="market-price" id="modalTotalGradedCost">${formatJpy(psa.totalGradedCostJpy)}</div>
+              <div class="market-net" id="modalRawCostSub">素体: $${psa.rawPriceUsd} (${formatJpy(psa.rawImportCost.totalCostJpy)}) + 鑑定料: ${formatJpy(psa.gradingFeeJpy)}</div>
             </div>
 
             <div class="market-box best-choice">
               <span class="best-badge">PSA10 (取得率: ${Math.round(psa.gemRate * 100)}%)</span>
               <div class="market-title">② PSA10 獲得時の手取り＆純利</div>
               <div class="market-price" style="color: var(--accent-emerald);">${formatJpy(psa.psa10SalePriceJpy)}</div>
-              <div style="font-weight: 800; color: #34d399; margin-top: 4px;">
+              <div style="font-weight: 800; color: #34d399; margin-top: 4px;" id="modalPsa10ProfitText">
                 純利: +${formatJpy(psa.psa10Profit.netProfitJpy)} (+${psa.psa10Profit.roiPercent}%)
               </div>
             </div>
@@ -577,15 +685,15 @@ window.openCardDetailModal = function(cardId) {
             <div class="market-box">
               <div class="market-title">③ PSA9 獲得時の手取り＆純利</div>
               <div class="market-price">${formatJpy(psa.psa9SalePriceJpy)}</div>
-              <div style="font-weight: 800; color: ${psa.psa9Profit.netProfitJpy >= 0 ? '#34d399' : '#fb7185'}; margin-top: 4px;">
+              <div style="font-weight: 800; color: ${psa.psa9Profit.netProfitJpy >= 0 ? '#34d399' : '#fb7185'}; margin-top: 4px;" id="modalPsa9ProfitText">
                 純利: ${psa.psa9Profit.netProfitJpy >= 0 ? '+' : ''}${formatJpy(psa.psa9Profit.netProfitJpy)} (${psa.psa9Profit.roiPercent}%)
               </div>
             </div>
 
             <div class="market-box" style="border-color: rgba(56, 189, 248, 0.4);">
               <div class="market-title">④ 加重平均 期待値 (EV)</div>
-              <div class="market-price" style="color: #38bdf8;">+${formatJpy(psa.expectedProfitJpy)}</div>
-              <div style="font-weight: 800; color: #c084fc; margin-top: 4px;">
+              <div class="market-price" style="color: #38bdf8;" id="modalExpectedProfit">${formatJpy(psa.expectedProfitJpy)}</div>
+              <div style="font-weight: 800; color: #c084fc; margin-top: 4px;" id="modalExpectedRoi">
                 期待ROI: +${psa.expectedRoiPercent}%
               </div>
             </div>
@@ -702,6 +810,54 @@ window.openCardDetailModal = function(cardId) {
     renderDetailChart(card);
   }, 50);
 }
+
+// モーダル内クイック素体価格再試算
+window.quickRecalcModal = function(cardId) {
+  const card = state.cards.find(c => c.id === cardId);
+  if (!card) return;
+  const rawInput = document.getElementById('quickRawPriceInput');
+  if (!rawInput) return;
+  const newRawPrice = parseFloat(rawInput.value);
+  if (isNaN(newRawPrice) || newRawPrice <= 0) return;
+
+  const tempCard = { ...card, rawPriceUsd: newRawPrice };
+  const analysis = analyzeCardInvestment(tempCard, state.settings);
+  const psa = analysis.psaAnalysis;
+
+  const costEl = document.getElementById('modalTotalGradedCost');
+  if (costEl) costEl.textContent = formatJpy(psa.totalGradedCostJpy);
+
+  const subEl = document.getElementById('modalRawCostSub');
+  if (subEl) subEl.textContent = `素体: $${psa.rawPriceUsd} (${formatJpy(psa.rawImportCost.totalCostJpy)}) + 鑑定料: ${formatJpy(psa.gradingFeeJpy)}`;
+
+  const p10El = document.getElementById('modalPsa10ProfitText');
+  if (p10El) p10El.textContent = `純利: +${formatJpy(psa.psa10Profit.netProfitJpy)} (+${psa.psa10Profit.roiPercent}%)`;
+
+  const p9El = document.getElementById('modalPsa9ProfitText');
+  if (p9El) {
+    p9El.textContent = `純利: ${psa.psa9Profit.netProfitJpy >= 0 ? '+' : ''}${formatJpy(psa.psa9Profit.netProfitJpy)} (${psa.psa9Profit.roiPercent}%)`;
+    p9El.style.color = psa.psa9Profit.netProfitJpy >= 0 ? '#34d399' : '#fb7185';
+  }
+
+  const expEl = document.getElementById('modalExpectedProfit');
+  if (expEl) expEl.textContent = `+${formatJpy(psa.expectedProfitJpy)}`;
+
+  const roiEl = document.getElementById('modalExpectedRoi');
+  if (roiEl) roiEl.textContent = `期待ROI: +${psa.expectedRoiPercent}%`;
+
+  const upsideEl = document.getElementById('modalUpsideVal');
+  if (upsideEl) upsideEl.textContent = psa.upsideMultiplier;
+};
+
+window.resetQuickPrice = function(cardId) {
+  const card = state.cards.find(c => c.id === cardId);
+  if (!card) return;
+  const rawInput = document.getElementById('quickRawPriceInput');
+  if (rawInput) {
+    rawInput.value = card.rawPriceUsd;
+    quickRecalcModal(cardId);
+  }
+};
 
 function renderDetailChart(card) {
   const ctx = document.getElementById('marketTrendChart');

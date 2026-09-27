@@ -832,3 +832,24 @@ export const DEFAULT_SETTINGS = {
     torecaJapan: { name: "トレカショップ買取", rate: 0.00, description: "0% (即現金化・買取価格)" }
   }
 };
+
+/**
+ * カードデータのメタ情報（参照元・最終更新日時）
+ * 価格はすべてここに記載の日付時点の参考値です。
+ * 実際のeBay/スニーカーダンク価格と乖離している場合があります。
+ */
+export const DATA_META = {
+  // カード相場データの最終手動更新日
+  cardDataUpdatedAt: "2026-09-20",
+  // 価格の参照元
+  sources: {
+    rawPrice: "eBay (completed listings / active listings 参照)",
+    psa10Price: "スニーカーダンク 成約相場 参照",
+    psa9Price: "スニーカーダンク / メルカリ 成約相場 参照",
+    mercariPrice: "メルカリ 直近成約実績 参照",
+    yahooPrice: "ヤフーフリマ 直近成約実績 参照",
+    gradingFee: "PSA Japan 鑑定代行（エコノミー/レギュラー）参照"
+  },
+  // 注意事項
+  disclaimer: "本アプリの価格データはすべて参考値です。実際の相場は外部サービス（eBay / スニーカーダンク / メルカリ等）で必ずご確認ください。投資の最終判断はご自身の責任で行ってください。"
+};
