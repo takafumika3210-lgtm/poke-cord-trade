@@ -30,49 +30,42 @@
         </div>
         <div>
           <h1 class="brand-title">Poke-Cord Trade</h1>
-          <div class="brand-subtitle">需給分析 × 海外仕入れ(eBay) × PSA鑑定グレーディング投資</div>
+          <div class="brand-subtitle">メルカリ国内販売特化 × 需給分析 × 優勝デッキ再現 ＆ PSA鑑定</div>
         </div>
       </div>
 
       <div class="header-controls">
-        <div class="rate-pill">
-          <label for="usdJpyRateInput">為替レート (USD/JPY):</label>
-          <div class="rate-input-wrapper">
-            <span>¥</span>
-            <input type="number" id="usdJpyRateInput" class="rate-input" step="0.5" value="150.0">
-          </div>
-          <button id="refreshRateBtn" class="btn-rate-refresh" title="open.er-api.com から最新USD/JPYを取得して全銘柄を再計算します">
-            🔄 レート更新
-          </button>
+        <div class="rate-pill" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.08);">
+          <span style="color: #ef4444; font-weight: 800; font-size: 0.85rem;">🛍️ メルカリ販売基準:</span>
+          <span style="font-size: 0.78rem; color: #ffffff;">手数料10% ＋ ネコポス送料¥210 ＋ 梱包¥50 自動控除済</span>
         </div>
-        <div id="rateFetchedAt" class="rate-fetched-badge" style="display:none;"></div>
 
         <button id="openSimulatorBtn" class="btn btn-secondary">
-          ⚡ 投資・PSAシミュレーター
+          ⚡ メルカリ損益シミュレーター
         </button>
 
         <button id="openAddCardBtn" class="btn btn-primary">
-          ➕ カード追加
+          ➕ リサーチ追加
         </button>
       </div>
     </header>
 
-    <!-- データ更新日時・免責バナー -->
+    <!-- メルカリ販売基準・データバナー -->
     <div id="dataBanner" class="data-banner glass-panel">
       <div class="data-banner-inner">
         <div class="data-banner-left">
-          <span class="data-banner-icon">📅</span>
+          <span class="data-banner-icon">🛍️</span>
           <div>
-            <div class="data-banner-title">価格データ最終更新: <span id="dataUpdatedAtLabel">2026年9月20日</span></div>
+            <div class="data-banner-title">メルカリ国内販売 特化モード <span id="dataUpdatedAtLabel" style="font-size: 0.74rem; color: #38bdf8; font-weight: normal; margin-left: 8px;">2026年9月最新相場</span></div>
             <div class="data-banner-sub">
-              素体価格 = <b>eBay completed listings 参照</b> &nbsp;|&nbsp;
-              PSA10/9価格 = <b>スニーカーダンク 成約相場 参照</b> &nbsp;|&nbsp;
-              鑑定料 = <b>PSA Japan エコノミー ¥3,500</b>
+              仕入れ = <b>カドショ実店舗・ストレージ・国内フリマ</b> &nbsp;|&nbsp;
+              販売 = <b>メルカリ（匿名配送・手取り自動試算）</b> &nbsp;|&nbsp;
+              鑑定 = <b>PSA日本支社 ¥3,500</b>
             </div>
           </div>
         </div>
         <div class="data-banner-right">
-          <span class="data-banner-warning">⚠️ 表示価格はすべて参考値です。実際の購入前に<a href="https://www.ebay.com" target="_blank" rel="noopener noreferrer" style="color:#38bdf8;">eBay</a>・<a href="https://snkrdunk.com" target="_blank" rel="noopener noreferrer" style="color:#38bdf8;">スニダン</a>で必ずご確認ください。</span>
+          <span class="data-banner-warning">✨ 全ての利益・ROIは「メルカリ手数料10%」および「送料・梱包費」を差し引いた実質手取りベースです。</span>
         </div>
       </div>
     </div>
@@ -80,19 +73,19 @@
     <!-- Strategy Mode Tabs -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
       <div class="view-tabs">
-        <button id="tabArbitrage" class="view-tab-btn active">
-          📦 ① 通常アービトラージ (完成品転売)
+        <button id="tabTournamentDecks" class="view-tab-btn active" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
+          🏆 ① 優勝デッキ再現販売 (環境分析 & 出品画像生成)
         </button>
         <button id="tabPsaGrading" class="view-tab-btn">
-          💎 ② PSA鑑定投資 (素体仕入れ ➔ PSA10/9化)
+          💎 ② 国内素体 ➔ PSA鑑定メルカリ販売 (高利益狙い)
         </button>
-        <button id="tabTournamentDecks" class="view-tab-btn" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
-          🏆 ③ 優勝デッキ再現販売 (需要分析 & 出品画像生成)
+        <button id="tabArbitrage" class="view-tab-btn">
+          📦 ③ 国内シングルカード転売 (特価 ➔ メルカリ)
         </button>
       </div>
 
       <div style="font-size: 0.8rem; color: var(--text-muted);">
-        ※海外eBayで素体美品（Near Mint）を仕入れ、PSA鑑定に出してPSA10/PSA9で売却する利益モデルを比較できます
+        ※海外輸入（eBay）のトラブル・為替リスクを完全排除した、安心の国内完結モデルです
       </div>
     </div>
 

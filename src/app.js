@@ -1,21 +1,20 @@
 import { INITIAL_CARDS, DEFAULT_SETTINGS, DATA_META } from './data.js';
 import { TOURNAMENT_DECKS } from './deckData.js';
 import { 
-  calculateImportCost, 
-  calculateDomesticSaleProfit, 
+  calculateMercariProfit,
   analyzeCardInvestment, 
   analyzePsaGradingStrategy,
-  fetchLatestExchangeRate
+  MERCARI_CONSTANTS
 } from './engine.js';
 
 let state = {
   cards: INITIAL_CARDS,
   decks: TOURNAMENT_DECKS,
   settings: JSON.parse(localStorage.getItem('poke_settings')) || DEFAULT_SETTINGS,
-  activeTab: 'arbitrage', // 'arbitrage' | 'psa_grading' | 'tournament_decks'
+  activeTab: 'tournament_decks', // 'tournament_decks' (デフォルト) | 'psa_grading' | 'arbitrage'
   filterGrade: 'all',
   filterBudget: 'all', // 'all' | 'under_30k' | 'under_50k' | 'under_100k' | 'over_100k'
-  sortBy: 'score', // 'score' | 'liquidity' | 'sold_count' | 'ebay_supply' | 'psa_roi' | 'upside' | 'profit' | 'roi' | 'trend'
+  sortBy: 'score', // 'score' | 'liquidity' | 'sold_count' | 'psa_roi' | 'upside' | 'profit' | 'roi'
   searchQuery: '',
   selectedCardId: null,
   activeModal: null,
@@ -29,17 +28,15 @@ if (savedCustomCards.length > 0) {
 }
 
 const formatJpy = (num) => '¥' + Math.round(num || 0).toLocaleString('ja-JP');
-const formatUsd = (num) => '$' + Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
 });
 
 function initApp() {
-  // データ最終更新日のバナー反映
   const updatedAtEl = document.getElementById('dataUpdatedAtLabel');
   if (updatedAtEl && DATA_META) {
-    updatedAtEl.textContent = `${DATA_META.cardDataUpdatedAt} 時点 (参考相場)`;
+    updatedAtEl.textContent = `${DATA_META.cardDataUpdatedAt} 国内相場`;
   }
 
   setupEventListeners();
@@ -47,60 +44,13 @@ function initApp() {
 }
 
 function setupEventListeners() {
-  // 為替レート手動変更
-  const rateInput = document.getElementById('usdJpyRateInput');
-  if (rateInput) {
-    rateInput.value = state.settings.usdJpyRate;
-    rateInput.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      if (!isNaN(val) && val > 0) {
-        state.settings.usdJpyRate = val;
-        localStorage.setItem('poke_settings', JSON.stringify(state.settings));
-        renderApp();
-      }
-    });
-  }
-
-  // 為替レート「更新」ボタン (APIから最新レート取得)
-  const refreshRateBtn = document.getElementById('refreshRateBtn');
-  const rateFetchedBadge = document.getElementById('rateFetchedAt');
-  if (refreshRateBtn) {
-    refreshRateBtn.addEventListener('click', async () => {
-      const originalText = refreshRateBtn.textContent;
-      refreshRateBtn.textContent = '⏳ 取得中...';
-      refreshRateBtn.disabled = true;
-
-      try {
-        const { rate, fetchedAt } = await fetchLatestExchangeRate();
-        state.settings.usdJpyRate = rate;
-        localStorage.setItem('poke_settings', JSON.stringify(state.settings));
-
-        if (rateInput) {
-          rateInput.value = rate;
-        }
-
-        if (rateFetchedBadge) {
-          rateFetchedBadge.style.display = 'inline-block';
-          rateFetchedBadge.textContent = `✅ ${fetchedAt} 最新為替 ¥${rate}/$ 適用済`;
-        }
-
-        renderApp();
-      } catch (err) {
-        alert('為替レートの取得に失敗しました。ネットワーク接続を確認するか、手動で入力してください。\n(' + err.message + ')');
-      } finally {
-        refreshRateBtn.textContent = originalText;
-        refreshRateBtn.disabled = false;
-      }
-    });
-  }
-
-  // 戦略タブ切替 (アービトラージ vs PSA鑑定 vs 優勝デッキ再現販売)
+  // 戦略タブ切替 (① 優勝デッキ再現販売 vs ② PSA鑑定メルカリ販売 vs ③ 国内シングル転売)
   const tabArbitrage = document.getElementById('tabArbitrage');
   const tabPsaGrading = document.getElementById('tabPsaGrading');
   const tabTournamentDecks = document.getElementById('tabTournamentDecks');
 
   const updateTabUI = (activeId) => {
-    [tabArbitrage, tabPsaGrading, tabTournamentDecks].forEach(tab => {
+    [tabTournamentDecks, tabPsaGrading, tabArbitrage].forEach(tab => {
       if (tab) {
         if (tab.id === activeId) tab.classList.add('active');
         else tab.classList.remove('active');
@@ -108,10 +58,10 @@ function setupEventListeners() {
     });
   };
 
-  if (tabArbitrage) {
-    tabArbitrage.addEventListener('click', () => {
-      state.activeTab = 'arbitrage';
-      updateTabUI('tabArbitrage');
+  if (tabTournamentDecks) {
+    tabTournamentDecks.addEventListener('click', () => {
+      state.activeTab = 'tournament_decks';
+      updateTabUI('tabTournamentDecks');
       renderApp();
     });
   }
@@ -122,10 +72,10 @@ function setupEventListeners() {
       renderApp();
     });
   }
-  if (tabTournamentDecks) {
-    tabTournamentDecks.addEventListener('click', () => {
-      state.activeTab = 'tournament_decks';
-      updateTabUI('tabTournamentDecks');
+  if (tabArbitrage) {
+    tabArbitrage.addEventListener('click', () => {
+      state.activeTab = 'arbitrage';
+      updateTabUI('tabArbitrage');
       renderApp();
     });
   }
@@ -178,7 +128,7 @@ function setupEventListeners() {
     });
   }
 
-  // シミュレーターボタン
+  // メルカリ損益シミュレーターボタン
   const simBtn = document.getElementById('openSimulatorBtn');
   if (simBtn) {
     simBtn.addEventListener('click', () => {
@@ -219,45 +169,6 @@ function renderApp() {
   }
 }
 
-function renderKPIs() {
-  const analyzed = state.cards.map(c => analyzeCardInvestment(c, state.settings));
-  const totalCount = analyzed.length;
-
-  if (state.activeTab === 'arbitrage') {
-    const avgRoi = totalCount > 0 ? (analyzed.reduce((acc, c) => acc + c.bestChannel.data.roiPercent, 0) / totalCount).toFixed(1) : 0;
-    const maxProfit = totalCount > 0 ? Math.max(...analyzed.map(c => c.bestChannel.data.netProfitJpy)) : 0;
-    const under30kCount = analyzed.filter(c => c.importCost.totalCostJpy < 30000).length;
-
-    document.getElementById('kpiLabel2').textContent = '通常仕入れ 平均ROI';
-    document.getElementById('kpiSub2').textContent = 'eBay仕入れ比 (手数料控除後)';
-    document.getElementById('kpiAvgRoi').textContent = '+' + avgRoi + '%';
-
-    document.getElementById('kpiLabel3').textContent = '最高純利 (通常仕入れ)';
-    document.getElementById('kpiMaxProfit').textContent = formatJpy(maxProfit);
-
-    document.getElementById('kpiLabel4').textContent = '🎯 3万円未満で仕入れ可能';
-    document.getElementById('kpiSub4').textContent = `全${totalCount}銘柄中 ${under30kCount}銘柄`;
-    document.getElementById('kpiHighRankCount').textContent = `${under30kCount} 銘柄`;
-  } else {
-    const avgExpectedRoi = totalCount > 0 ? (analyzed.reduce((acc, c) => acc + c.psaAnalysis.expectedRoiPercent, 0) / totalCount).toFixed(1) : 0;
-    const maxPsa10Profit = totalCount > 0 ? Math.max(...analyzed.map(c => c.psaAnalysis.psa10Profit.netProfitJpy)) : 0;
-    const under30kPsaCount = analyzed.filter(c => c.psaAnalysis.totalGradedCostJpy < 30000).length;
-
-    document.getElementById('kpiLabel2').textContent = 'PSA鑑定 加重平均期待ROI';
-    document.getElementById('kpiSub2').textContent = 'PSA10率×PSA9率 加重平均';
-    document.getElementById('kpiAvgRoi').textContent = '+' + avgExpectedRoi + '%';
-
-    document.getElementById('kpiLabel3').textContent = 'PSA10化 最高純利益';
-    document.getElementById('kpiMaxProfit').textContent = formatJpy(maxPsa10Profit);
-
-    document.getElementById('kpiLabel4').textContent = '🎯 3万円未満で鑑定投資可能';
-    document.getElementById('kpiSub4').textContent = `素体仕入れ＋鑑定料込`;
-    document.getElementById('kpiHighRankCount').textContent = `${under30kPsaCount} 銘柄`;
-  }
-
-  document.getElementById('kpiCardCount').textContent = totalCount + ' 枚';
-}
-
 function renderDeckKPIs() {
   const decks = state.decks;
   const totalCount = decks.length;
@@ -272,7 +183,7 @@ function renderDeckKPIs() {
   document.getElementById('kpiCardCount').textContent = totalCount + ' 構築';
 
   document.getElementById('kpiLabel2').textContent = '1デッキあたり 平均純利益';
-  document.getElementById('kpiSub2').textContent = 'メルカリ販売(手数料10%+送料込)';
+  document.getElementById('kpiSub2').textContent = 'メルカリ手数料10%＋送料込実質手取り';
   document.getElementById('kpiAvgRoi').textContent = `+${formatJpy(avgProfit)}`;
 
   document.getElementById('kpiLabel3').textContent = '最高純利デッキ';
@@ -283,6 +194,45 @@ function renderDeckKPIs() {
   document.getElementById('kpiHighRankCount').textContent = 'ドラパルトex';
 }
 
+function renderKPIs() {
+  const analyzed = state.cards.map(c => analyzeCardInvestment(c, state.settings));
+  const totalCount = analyzed.length;
+
+  if (state.activeTab === 'arbitrage') {
+    const avgRoi = totalCount > 0 ? (analyzed.reduce((acc, c) => acc + c.mercariProfit.roiPercent, 0) / totalCount).toFixed(1) : 0;
+    const maxProfit = totalCount > 0 ? Math.max(...analyzed.map(c => c.mercariProfit.netProfitJpy)) : 0;
+    const under30kCount = analyzed.filter(c => c.purchaseCostJpy < 30000).length;
+
+    document.getElementById('kpiLabel2').textContent = 'メルカリ販売 平均ROI';
+    document.getElementById('kpiSub2').textContent = '手数料10%+送料控除後手取り比';
+    document.getElementById('kpiAvgRoi').textContent = '+' + avgRoi + '%';
+
+    document.getElementById('kpiLabel3').textContent = '最高純利 (シングル販売)';
+    document.getElementById('kpiMaxProfit').textContent = formatJpy(maxProfit);
+
+    document.getElementById('kpiLabel4').textContent = '🎯 3万円未満で仕入れ可能';
+    document.getElementById('kpiSub4').textContent = `全${totalCount}銘柄中 ${under30kCount}銘柄`;
+    document.getElementById('kpiHighRankCount').textContent = `${under30kCount} 銘柄`;
+  } else {
+    const avgExpectedRoi = totalCount > 0 ? (analyzed.reduce((acc, c) => acc + c.psaAnalysis.expectedRoiPercent, 0) / totalCount).toFixed(1) : 0;
+    const maxPsa10Profit = totalCount > 0 ? Math.max(...analyzed.map(c => c.psaAnalysis.psa10Profit.netProfitJpy)) : 0;
+    const under30kPsaCount = analyzed.filter(c => c.psaAnalysis.totalGradedCostJpy < 30000).length;
+
+    document.getElementById('kpiLabel2').textContent = 'PSA鑑定 メルカリ期待ROI';
+    document.getElementById('kpiSub2').textContent = 'PSA10率×PSA9率 手取り加重平均';
+    document.getElementById('kpiAvgRoi').textContent = '+' + avgExpectedRoi + '%';
+
+    document.getElementById('kpiLabel3').textContent = 'PSA10化 メルカリ最高純利';
+    document.getElementById('kpiMaxProfit').textContent = formatJpy(maxPsa10Profit);
+
+    document.getElementById('kpiLabel4').textContent = '🎯 3万円未満で鑑定投資可能';
+    document.getElementById('kpiSub4').textContent = `素体仕入れ＋鑑定料込`;
+    document.getElementById('kpiHighRankCount').textContent = `${under30kPsaCount} 銘柄`;
+  }
+
+  document.getElementById('kpiCardCount').textContent = totalCount + ' 枚';
+}
+
 function renderTableHeader() {
   const thead = document.getElementById('cardTableHead');
   if (!thead) return;
@@ -291,26 +241,26 @@ function renderTableHeader() {
     thead.innerHTML = `
       <tr>
         <th>判定</th>
-        <th>カード情報 / グレード</th>
-        <th>国内需給・売却力 (直近7日売買)</th>
-        <th>eBay仕入れ供給 (出品数 / 原価)</th>
-        <th>国内想定売価 / 推奨先</th>
-        <th>想定純利益 (手取り)</th>
-        <th>粗利率 (ROI)</th>
-        <th>購入先 / 分析</th>
+        <th>カード名 / 状態</th>
+        <th>メルカリ7日成約力 (消化率)</th>
+        <th>カドショ仕入れ目安</th>
+        <th>メルカリ想定売価</th>
+        <th>メルカリ実質手取り</th>
+        <th>純利益 (ROI)</th>
+        <th>メルカリ相場 / 詳細</th>
       </tr>
     `;
   } else {
     thead.innerHTML = `
       <tr>
         <th>鑑定推奨</th>
-        <th>カード情報 / 素体</th>
-        <th>素体仕入れ＋鑑定総原価 (内訳・相場)</th>
-        <th>国内需給 (PSA10/9 成約力)</th>
-        <th>PSA10化 売価 / 純利</th>
-        <th>PSA9化 売価 / 純利</th>
+        <th>カード名 / 素体状態</th>
+        <th>素体仕入＋PSA鑑定料(¥3500)</th>
+        <th>メルカリ成約力 (7日成約数)</th>
+        <th>PSA10 メルカリ売価 / 純利</th>
+        <th>PSA9 メルカリ売価 / 純利</th>
         <th>PSA10率 / 期待ROI</th>
-        <th>購入先 / 分析</th>
+        <th>メルカリ相場 / 詳細</th>
       </tr>
     `;
   }
@@ -325,7 +275,7 @@ function renderTable() {
   // 予算フィルタ
   if (state.filterBudget !== 'all') {
     analyzed = analyzed.filter(item => {
-      const cost = state.activeTab === 'arbitrage' ? item.importCost.totalCostJpy : item.psaAnalysis.totalGradedCostJpy;
+      const cost = state.activeTab === 'arbitrage' ? item.purchaseCostJpy : item.psaAnalysis.totalGradedCostJpy;
       if (state.filterBudget === 'under_30k') return cost < 30000;
       if (state.filterBudget === 'under_50k') return cost < 50000;
       if (state.filterBudget === 'under_100k') return cost < 100000;
@@ -355,25 +305,15 @@ function renderTable() {
   // ソート処理
   analyzed.sort((a, b) => {
     if (state.sortBy === 'liquidity') {
-      const aRate = a.card.domesticMarketLiquidity ? a.card.domesticMarketLiquidity.sellThroughRate : (a.liquidity ? a.liquidity.sellThroughRate : 0);
-      const bRate = b.card.domesticMarketLiquidity ? b.card.domesticMarketLiquidity.sellThroughRate : (b.liquidity ? b.liquidity.sellThroughRate : 0);
-      return bRate - aRate;
+      return b.liquidity.sellThroughRate - a.liquidity.sellThroughRate;
     }
     if (state.sortBy === 'sold_count') {
-      const aSold = a.card.domesticMarketLiquidity ? a.card.domesticMarketLiquidity.weeklySoldCount : (a.liquidity ? a.liquidity.sold7d : 0);
-      const bSold = b.card.domesticMarketLiquidity ? b.card.domesticMarketLiquidity.weeklySoldCount : (b.liquidity ? b.liquidity.sold7d : 0);
-      return bSold - aSold;
-    }
-    if (state.sortBy === 'ebay_supply') {
-      const aSupply = a.card.supplyStatus ? a.card.supplyStatus.ebayActiveListings : (a.liquidity ? a.liquidity.ebayActiveListings : 0);
-      const bSupply = b.card.supplyStatus ? b.card.supplyStatus.ebayActiveListings : (b.liquidity ? b.liquidity.ebayActiveListings : 0);
-      return bSupply - aSupply;
+      return b.liquidity.sold7d - a.liquidity.sold7d;
     }
 
     if (state.activeTab === 'arbitrage') {
-      if (state.sortBy === 'profit') return b.bestChannel.data.netProfitJpy - a.bestChannel.data.netProfitJpy;
-      if (state.sortBy === 'roi') return b.bestChannel.data.roiPercent - a.bestChannel.data.roiPercent;
-      if (state.sortBy === 'trend') return b.card.priceTrend30d - a.card.priceTrend30d;
+      if (state.sortBy === 'profit') return b.mercariProfit.netProfitJpy - a.mercariProfit.netProfitJpy;
+      if (state.sortBy === 'roi') return b.mercariProfit.roiPercent - a.mercariProfit.roiPercent;
       return b.overallScore - a.overallScore;
     } else {
       if (state.sortBy === 'psa_roi' || state.sortBy === 'roi') return b.psaAnalysis.expectedRoiPercent - a.psaAnalysis.expectedRoiPercent;
@@ -395,23 +335,13 @@ function renderTable() {
     tr.className = 'card-row';
     tr.onclick = () => openCardDetailModal(item.card.id);
 
-    const isUnder30k = (state.activeTab === 'arbitrage' ? item.importCost.totalCostJpy : item.psaAnalysis.totalGradedCostJpy) < 30000;
-    const ebayUrl = item.card.ebayBuyUrl || `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(item.card.name + ' japanese pokemon raw')}`;
-    const liq = item.card.domesticMarketLiquidity || { 
-      weeklySoldCount: item.liquidity.sold7d || 15, 
-      activeListingCount: item.liquidity.activeListings || 20, 
-      sellThroughRate: item.liquidity.sellThroughRate || 75.0, 
-      estimatedDaysToSell: item.liquidity.turnoverDays || 3.0 
-    };
-    const supply = item.card.supplyStatus || { 
-      ebayActiveListings: item.liquidity.ebayActiveListings || 10, 
-      supplyRating: item.liquidity.ebaySupplyStatus || '充足', 
-      isReadilyAvailable: true 
-    };
+    const isUnder30k = (state.activeTab === 'arbitrage' ? item.purchaseCostJpy : item.psaAnalysis.totalGradedCostJpy) < 30000;
+    const mercariUrl = item.card.mercariSoldUrl || `https://jp.mercari.com/search?keyword=${encodeURIComponent(item.card.name)}&status=sold_out`;
+    const liq = item.liquidity;
 
     if (state.activeTab === 'arbitrage') {
       const rankBadgeClass = `badge-rank-${item.rank.toLowerCase()}`;
-      const bestCh = item.bestChannel.data;
+      const mProfit = item.mercariProfit;
 
       tr.innerHTML = `
         <td><span class="badge ${rankBadgeClass}">${item.rank}</span></td>
@@ -430,43 +360,37 @@ function renderTable() {
         <td>
           <div style="display: flex; flex-direction: column; gap: 3px;">
             <div style="font-weight: 700; color: #38bdf8; font-size: 0.86rem; display: flex; align-items: center; gap: 4px;">
-              🔥 7日成約: <span style="color:#ffffff;">${liq.weeklySoldCount}件</span>
-              <span style="font-size: 0.72rem; color: var(--text-muted);">(出品:${liq.activeListingCount}件)</span>
+              🔥 7日成約: <span style="color:#ffffff;">${liq.sold7d}件</span>
+              <span style="font-size: 0.72rem; color: var(--text-muted);">(出品:${liq.activeListings}件)</span>
             </div>
             <div style="font-size: 0.76rem; color: #34d399; font-weight: 600;">
-              消化率: ${liq.sellThroughRate}% (約${liq.estimatedDaysToSell}日で売却)
+              消化率: ${liq.sellThroughRate}% (約${liq.turnoverDays}日で売却)
             </div>
           </div>
         </td>
         <td>
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <div style="font-weight: 700; color: #ffffff;">${formatUsd(item.card.ebayPriceUsd)}</div>
-            <div style="font-size: 0.74rem; color: ${isUnder30k ? '#38bdf8' : 'var(--text-muted)'}; font-weight: ${isUnder30k ? '700' : 'normal'};">
-              総原価: ${formatJpy(item.importCost.totalCostJpy)}
-            </div>
-            <div style="font-size: 0.72rem; color: ${supply.supplyRating.includes('潤沢') || supply.supplyRating === '充足' ? '#34d399' : '#fbbf24'}; font-weight: 600;">
-              🛒 eBay出品: ${supply.ebayActiveListings}件 (${supply.supplyRating})
-            </div>
-          </div>
+          <div style="font-weight: 700; color: #ffffff;">${formatJpy(item.purchaseCostJpy)}</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">カドショ/フリマ仕入</div>
         </td>
         <td>
-          <div style="font-weight: 700; color: #ffffff;">${formatJpy(bestCh.salePriceJpy)}</div>
-          <div style="font-size: 0.74rem; color: var(--accent-blue); font-weight: 600;">推奨: ${bestCh.platformName}</div>
+          <div style="font-weight: 700; color: #ffffff;">${formatJpy(mProfit.salePriceJpy)}</div>
+          <div style="font-size: 0.72rem; color: #ef4444; font-weight: 600;">メルカリ成約相場</div>
         </td>
         <td>
-          <div class="profit-highlight">+${formatJpy(bestCh.netProfitJpy)}</div>
-          <div style="font-size: 0.74rem; color: var(--text-muted);">手取: ${formatJpy(bestCh.netRevenueJpy)}</div>
+          <div style="font-weight: 700; color: #38bdf8;">${formatJpy(mProfit.netRevenueJpy)}</div>
+          <div style="font-size: 0.70rem; color: var(--text-muted);">(手数料10%+送料引後)</div>
         </td>
         <td>
-          <span class="roi-badge">+${bestCh.roiPercent}%</span>
+          <div class="profit-highlight">+${formatJpy(mProfit.netProfitJpy)}</div>
+          <span class="roi-badge" style="margin-top: 2px; display: inline-block;">+${mProfit.roiPercent}%</span>
         </td>
         <td>
           <div style="display: flex; gap: 6px; align-items: center;">
-            <a href="${ebayUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 5px 8px; font-size: 0.75rem; text-decoration: none; color: #38bdf8; display: inline-flex; align-items: center; gap: 4px;" onclick="event.stopPropagation();" title="eBayで実際の商品出品を見る">
-              🛒 eBay
+            <a href="${mercariUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 5px 8px; font-size: 0.75rem; text-decoration: none; color: #ef4444; display: inline-flex; align-items: center; gap: 4px;" onclick="event.stopPropagation();" title="メルカリ売り切れ相場を見る">
+              🛍️ メルカリ相場
             </a>
             <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.78rem;" onclick="event.stopPropagation(); openCardDetailModal('${item.card.id}')">
-              分析 ➔
+              詳細 ➔
             </button>
           </div>
         </td>
@@ -499,18 +423,15 @@ function renderTable() {
             ${formatJpy(psa.totalGradedCostJpy)}
           </div>
           <div style="font-size: 0.71rem; color: var(--text-muted); line-height: 1.3; margin-top: 2px;">
-            素体$${psa.rawPriceUsd} + 送料$${psa.rawShippingUsd} + 鑑定料${formatJpy(psa.gradingFeeJpy)}
-          </div>
-          <div style="font-size: 0.70rem; color: #34d399; font-weight: 600; margin-top: 2px;">
-            🛒 素体出品: ${supply.ebayActiveListings}件 (${supply.supplyRating})
+            素体${formatJpy(psa.rawPriceJpy)} ＋ PSA鑑定料${formatJpy(psa.gradingFeeJpy)}
           </div>
         </td>
         <td>
           <div style="font-weight: 700; color: #38bdf8; font-size: 0.85rem;">
-            🔥 7日成約: ${liq.weeklySoldCount}件
+            🔥 7日成約: ${liq.sold7d}件
           </div>
           <div style="font-size: 0.72rem; color: #34d399; font-weight: 600;">
-            消化率: ${liq.sellThroughRate}% (約${liq.estimatedDaysToSell}日)
+            消化率: ${liq.sellThroughRate}% (約${liq.turnoverDays}日)
           </div>
         </td>
         <td>
@@ -531,8 +452,8 @@ function renderTable() {
         </td>
         <td>
           <div style="display: flex; gap: 6px; align-items: center;">
-            <a href="${ebayUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 5px 8px; font-size: 0.75rem; text-decoration: none; color: #c084fc; display: inline-flex; align-items: center; gap: 4px;" onclick="event.stopPropagation();" title="eBayで素体(Raw)出品ページを見る">
-              🛒 素体(eBay)
+            <a href="${mercariUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 5px 8px; font-size: 0.75rem; text-decoration: none; color: #ef4444; display: inline-flex; align-items: center; gap: 4px;" onclick="event.stopPropagation();" title="メルカリで成約相場を見る">
+              🛍️ メルカリ相場
             </a>
             <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.78rem;" onclick="event.stopPropagation(); openCardDetailModal('${item.card.id}')">
               詳細 ➔
@@ -572,9 +493,7 @@ function renderDeckView() {
 
   decks.forEach(deck => {
     const p = deck.pricing;
-    const mercariNet = Math.round(p.recommendedSalePriceJpy * (1 - p.mercariFeeRate) - p.shippingJpy);
-    const mercariProfit = mercariNet - p.partsCostJpy;
-    const roi = parseFloat(((mercariProfit / p.partsCostJpy) * 100).toFixed(1));
+    const mProfit = calculateMercariProfit(p.recommendedSalePriceJpy, p.partsCostJpy);
 
     const cardEl = document.createElement('div');
     cardEl.className = 'deck-card';
@@ -586,7 +505,7 @@ function renderDeckView() {
               ${deck.tier}
             </span>
             <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; margin-left: 6px;">
-              シェア ${deck.sharePercent}%
+              環境シェア ${deck.sharePercent}%
             </span>
             <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-top: 8px;">
               ${deck.name}
@@ -622,14 +541,14 @@ function renderDeckView() {
             <div style="font-size: 0.68rem; color: var(--text-muted);">60枚+スリーブ込</div>
           </div>
           <div>
-            <div style="font-size: 0.7rem; color: var(--text-secondary);">推奨販売価格</div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary);">メルカリ推奨売価</div>
             <div style="font-size: 1.05rem; font-weight: 800; color: #38bdf8;">${formatJpy(p.recommendedSalePriceJpy)}</div>
-            <div style="font-size: 0.68rem; color: var(--text-muted);">(即売れ: ${formatJpy(p.quickSalePriceJpy)})</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted);">(即売: ${formatJpy(p.quickSalePriceJpy)})</div>
           </div>
           <div>
-            <div style="font-size: 0.7rem; color: var(--text-secondary);">想定純利益 (ROI)</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: var(--accent-emerald);">+${formatJpy(mercariProfit)}</div>
-            <div style="font-size: 0.72rem; color: #34d399; font-weight: 700;">+${roi}%</div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary);">実質純利益 (ROI)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: var(--accent-emerald);">+${formatJpy(mProfit.netProfitJpy)}</div>
+            <div style="font-size: 0.72rem; color: #34d399; font-weight: 700;">+${mProfit.roiPercent}%</div>
           </div>
         </div>
 
@@ -657,9 +576,7 @@ window.openDeckDetailModal = function(deckId, scrollToGenerator = false) {
   if (!deck) return;
 
   const p = deck.pricing;
-  const mercariNet = Math.round(p.recommendedSalePriceJpy * (1 - p.mercariFeeRate) - p.shippingJpy);
-  const mercariProfit = mercariNet - p.partsCostJpy;
-  const roi = parseFloat(((mercariProfit / p.partsCostJpy) * 100).toFixed(1));
+  const mProfit = calculateMercariProfit(p.recommendedSalePriceJpy, p.partsCostJpy);
 
   const modalContainer = document.getElementById('modalContainer');
   modalContainer.innerHTML = `
@@ -676,7 +593,7 @@ window.openDeckDetailModal = function(deckId, scrollToGenerator = false) {
                 環境シェア ${deck.sharePercent}%
               </span>
               <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
-                粗利率 +${roi}%
+                実質粗利率 +${mProfit.roiPercent}%
               </span>
             </div>
             <h2 style="font-size: 1.45rem; font-weight: 800; color: #ffffff; margin-top: 6px;">
@@ -726,7 +643,7 @@ window.openDeckDetailModal = function(deckId, scrollToGenerator = false) {
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div>
               <h3 style="font-size: 1.05rem; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 8px;">
-                📸 フリマ（メルカリ等）出品用メイン画像 自動ジェネレーター
+                📸 メルカリ出品用メイン画像 自動ジェネレーター
               </h3>
               <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;">
                 プロ出品者のようなアイキャッチ帯・二重スリーブ・即対戦可能バッジ付き画像を瞬時に生成！そのまま出品画像として保存できます。
@@ -794,7 +711,6 @@ window.openDeckDetailModal = function(deckId, scrollToGenerator = false) {
     </div>
   `;
 
-  // Canvas に出品モックアップ画像を描画
   setTimeout(() => {
     drawDeckMockupCanvas(deck);
     if (scrollToGenerator) {
@@ -804,9 +720,6 @@ window.openDeckDetailModal = function(deckId, scrollToGenerator = false) {
   }, 60);
 };
 
-/**
- * メルカリ出品用モックアップ画像をCanvasで自動生成
- */
 function drawDeckMockupCanvas(deck) {
   const canvas = document.getElementById('deckMockupCanvas');
   if (!canvas) return;
@@ -814,7 +727,7 @@ function drawDeckMockupCanvas(deck) {
   const w = canvas.width;
   const h = canvas.height;
 
-  // 1. 背景グラデーション (高級感のあるダークゲーミングプレイマット風)
+  // 1. 背景グラデーション
   const bgGrad = ctx.createLinearGradient(0, 0, w, h);
   bgGrad.addColorStop(0, '#090d16');
   bgGrad.addColorStop(0.5, '#131d33');
@@ -822,7 +735,7 @@ function drawDeckMockupCanvas(deck) {
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, w, h);
 
-  // 背景のグリッド・ハニカムパターン
+  // グリッド線
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
   ctx.lineWidth = 1;
   for (let x = 0; x < w; x += 40) {
@@ -858,7 +771,7 @@ function drawDeckMockupCanvas(deck) {
   ctx.font = 'bold 18px "Noto Sans JP", sans-serif';
   ctx.fillText('⚡ 60枚ガチ構築・新品二重スリーブ付き・即対戦可能 ⚡', w / 2, 94);
 
-  // 4. メインカードプレビュー（3枚の象徴的カードを扇状/整列配置）
+  // 4. メインカードプレビュー
   const cards = deck.featuredCards || [];
   const cardW = 160;
   const cardH = 224;
@@ -868,7 +781,6 @@ function drawDeckMockupCanvas(deck) {
   cards.forEach((c, i) => {
     const cx = startX + i * 165;
     
-    // スリーブ外枠
     ctx.fillStyle = '#0f172a';
     ctx.strokeStyle = i === 0 ? '#38bdf8' : (i === 1 ? '#a855f7' : '#f59e0b');
     ctx.lineWidth = 3;
@@ -877,7 +789,6 @@ function drawDeckMockupCanvas(deck) {
     ctx.fill();
     ctx.stroke();
 
-    // カード内部グラデーション（ホログラムアート風）
     const cardGrad = ctx.createLinearGradient(cx, cardY, cx + cardW, cardY + cardH);
     cardGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
     cardGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.25)');
@@ -887,31 +798,27 @@ function drawDeckMockupCanvas(deck) {
     ctx.roundRect(cx + 8, cardY + 8, cardW - 16, cardH - 16, 6);
     ctx.fill();
 
-    // バッジ
     ctx.fillStyle = i === 0 ? '#38bdf8' : (i === 1 ? '#a855f7' : '#f59e0b');
     ctx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(c.badge, cx + 16, cardY + 30);
 
-    // カード名
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 16px "Noto Sans JP", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(c.name, cx + cardW / 2, cardY + 110);
 
-    // 役割
     ctx.fillStyle = '#94a3b8';
     ctx.font = '13px "Noto Sans JP", sans-serif';
     ctx.fillText(c.role, cx + cardW / 2, cardY + 138);
 
-    // キラキラ感演出
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.beginPath();
     ctx.arc(cx + cardW - 24, cardY + 24, 6, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // 5. 下部 特徴・アピールバッジ群
+  // 5. 下部 特徴バッジ
   const badgeY = 415;
   ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -921,7 +828,6 @@ function drawDeckMockupCanvas(deck) {
   ctx.fill();
   ctx.stroke();
 
-  // アピールポイントテキスト
   ctx.textAlign = 'left';
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 16px "Noto Sans JP", sans-serif';
@@ -936,9 +842,8 @@ function drawDeckMockupCanvas(deck) {
   ctx.fillStyle = '#34d399';
   ctx.font = 'bold 22px "Noto Sans JP", sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText(`特価 ¥${deck.pricing.recommendedSalePriceJpy.toLocaleString()} (送料無料)`, 30, h - 22);
+  ctx.fillText(`メルカリ特価 ¥${deck.pricing.recommendedSalePriceJpy.toLocaleString()} (送料無料)`, 30, h - 22);
 
-  // 即購入OKバッジ
   ctx.fillStyle = '#ef4444';
   ctx.beginPath();
   ctx.roundRect(w - 180, h - 48, 150, 36, 6);
@@ -949,9 +854,6 @@ function drawDeckMockupCanvas(deck) {
   ctx.fillText('即購入大歓迎！', w - 105, h - 24);
 }
 
-/**
- * 出品モックアップ画像をPNGとしてダウンロード
- */
 window.downloadDeckMockupImage = function(deckId) {
   const canvas = document.getElementById('deckMockupCanvas');
   if (!canvas) return;
@@ -961,18 +863,15 @@ window.downloadDeckMockupImage = function(deckId) {
   link.click();
 };
 
-/**
- * 出品タイトル・本文を一括コピー
- */
 window.copyListingTemplate = function(deckId) {
   const title = document.getElementById('listingTitleInput').value;
   const desc = document.getElementById('listingDescInput').value;
   const text = `${title}\n\n${desc}`;
 
   navigator.clipboard.writeText(text).then(() => {
-    alert('✅ 出品用タイトルと説明文をクリップボードにコピーしました！そのままメルカリに貼り付けできます。');
+    alert('✅ 出品用タイトルと説明文をコピーしました！メルカリにそのまま貼り付け可能です。');
   }).catch(() => {
-    alert('コピーに失敗しました。手動でテキストを選択してコピーしてください。');
+    alert('コピーに失敗しました。手動で選択してコピーしてください。');
   });
 };
 
@@ -985,26 +884,10 @@ window.openCardDetailModal = function(cardId) {
   const psa = analysis.psaAnalysis;
   const modalContainer = document.getElementById('modalContainer');
 
-  const ebayUrl = card.ebayBuyUrl || `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name + ' japanese raw')}`;
-  const snkrUrl = card.snkrdunkUrl || `https://snkrdunk.com/search?keywords=${encodeURIComponent(card.name)}`;
   const mercariUrl = card.mercariSoldUrl || `https://jp.mercari.com/search?keyword=${encodeURIComponent(card.name)}&status=sold_out`;
-  const yahooUrl = card.yahooSoldUrl || `https://paypayfleamarket.yahoo.co.jp/search/${encodeURIComponent(card.name)}`;
-
-  const liq = card.domesticMarketLiquidity || {
-    weeklySoldCount: analysis.liquidity.sold7d || 15,
-    activeListingCount: analysis.liquidity.activeListings || 20,
-    sellThroughRate: analysis.liquidity.sellThroughRate || 75.0,
-    estimatedDaysToSell: analysis.liquidity.turnoverDays || 3.0,
-    priceRangeMin: card.snkrdunkPriceJpy * 0.95,
-    priceRangeMax: card.snkrdunkPriceJpy * 1.05
-  };
-
-  const supply = card.supplyStatus || {
-    ebayActiveListings: analysis.liquidity.ebayActiveListings || 10,
-    ebayRecentSoldCount: analysis.liquidity.ebaySold7d || 12,
-    supplyRating: analysis.liquidity.ebaySupplyStatus || '充足',
-    isReadilyAvailable: true
-  };
+  const snkrUrl = card.snkrdunkUrl || `https://snkrdunk.com/search?keywords=${encodeURIComponent(card.name)}`;
+  const mProfit = analysis.mercariProfit;
+  const liq = analysis.liquidity;
 
   modalContainer.innerHTML = `
     <div class="modal-overlay" onclick="closeModal(event)">
@@ -1023,19 +906,13 @@ window.openCardDetailModal = function(cardId) {
                 ${card.cardSet} (${card.cardNumber}) • ${card.releaseYear}年
               </div>
 
-              <!-- 購入・相場確認外部リンクボタン群 -->
+              <!-- メルカリ直行リンク -->
               <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
-                <a href="${ebayUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none;">
-                  🛒 eBayで出品・素体を見る ↗
+                <a href="${mercariUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background:#ef4444; padding: 6px 14px; font-size: 0.8rem; text-decoration: none;">
+                  🛍️ メルカリで売り切れ相場を確認 ↗
                 </a>
-                <a href="${snkrUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none; color: #38bdf8;">
+                <a href="${snkrUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; text-decoration: none; color: #38bdf8;">
                   📊 スニダン相場 ↗
-                </a>
-                <a href="${mercariUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none; color: #ef4444;">
-                  🛍️ メルカリ成約 ↗
-                </a>
-                <a href="${yahooUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none; color: #f59e0b;">
-                  📦 ヤフーフリマ ↗
                 </a>
               </div>
             </div>
@@ -1043,438 +920,134 @@ window.openCardDetailModal = function(cardId) {
           <button class="modal-close-btn" onclick="closeModal()">✕</button>
         </div>
 
-        <!-- 【ユーザー疑問解消】素体仕入れ＋鑑定総原価の算出根拠・内訳解説パネル -->
-        <div style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 14px; padding: 18px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
-            <div style="font-size: 0.92rem; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 6px;">
-              💡 「素体仕入れ＋鑑定総原価 (${formatJpy(psa.totalGradedCostJpy)})」の算出内訳と根拠
-            </div>
-            <div style="font-size: 0.75rem; color: #cbd5e1; background: rgba(15, 23, 42, 0.8); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-              📅 基準日付: <strong style="color:#38bdf8;">2026年9月20日時点</strong>のeBay落札参考相場 (為替1ドル=¥${state.settings.usdJpyRate})
-            </div>
+        <!-- メルカリ手取り ＆ 純利益ブレイクダウン -->
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 14px; padding: 18px;">
+          <div style="font-size: 0.95rem; font-weight: 800; color: #f87171; margin-bottom: 10px;">
+            🛍️ メルカリ販売時の手取り額 ＆ 純利益明細
           </div>
 
-          <!-- コスト内訳ステップ -->
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 14px;">
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
-              <div style="font-size: 0.72rem; color: var(--text-secondary);">① 素体本体価格 (eBay)</div>
-              <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin: 2px 0;">${formatUsd(psa.rawPriceUsd)}</div>
-              <div style="font-size: 0.70rem; color: var(--text-muted);">${formatJpy(psa.rawImportCost.itemCostJpy)} (未鑑定・美品NM基準)</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">① 想定販売価格</div>
+              <div style="font-size: 1.2rem; font-weight: 800; color: #ffffff;">${formatJpy(mProfit.salePriceJpy)}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted);">メルカリ直近成約相場</div>
             </div>
 
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
-              <div style="font-size: 0.72rem; color: var(--text-secondary);">② 国際送料 (米国➔日本)</div>
-              <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin: 2px 0;">${formatUsd(psa.rawShippingUsd)}</div>
-              <div style="font-size: 0.70rem; color: var(--text-muted);">${formatJpy(psa.rawImportCost.shippingCostJpy)} (追跡付通常配送)</div>
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">② 手数料 ＋ 送料 ＋ 梱包費</div>
+              <div style="font-size: 1.2rem; font-weight: 800; color: #fb7185;">▲ ${formatJpy(mProfit.platformFeeJpy + mProfit.shippingJpy + mProfit.packingJpy)}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted);">手数料10%(${formatJpy(mProfit.platformFeeJpy)}) + ネコポス¥210 + 資材¥50</div>
             </div>
 
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
-              <div style="font-size: 0.72rem; color: var(--text-secondary);">③ 輸入消費税</div>
-              <div style="font-size: 1.05rem; font-weight: 700; color: #ffffff; margin: 2px 0;">${formatJpy(psa.rawImportCost.importTaxJpy)}</div>
-              <div style="font-size: 0.70rem; color: var(--text-muted);">${psa.rawImportCost.importTaxJpy > 0 ? '課税ベース(60%)×10%' : '¥16,666以下免税特例(0円)'}</div>
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">③ メルカリ手取り額</div>
+              <div style="font-size: 1.2rem; font-weight: 800; color: #38bdf8;">${formatJpy(mProfit.netRevenueJpy)}</div>
+              <div style="font-size: 0.70rem; color: var(--text-muted);">口座に実際に入る金額</div>
             </div>
 
-            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
-              <div style="font-size: 0.72rem; color: var(--text-secondary);">④ PSA鑑定代行料</div>
-              <div style="font-size: 1.05rem; font-weight: 700; color: #c084fc; margin: 2px 0;">${formatJpy(psa.gradingFeeJpy)}</div>
-              <div style="font-size: 0.70rem; color: var(--text-muted);">PSA日本支社 エコノミープラン</div>
-            </div>
-          </div>
-
-          <!-- インライン再試算フォーム -->
-          <div style="background: rgba(30, 41, 59, 0.6); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-            <div style="font-size: 0.8rem; color: #e2e8f0;">
-              <strong>🔍 今見つけたeBayの素体価格でリアルタイム再試算:</strong>
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">現在の出品価格を入力すると、即座に総原価と純利益・ROIを再計算します</div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 0.85rem; font-weight: 700; color: #38bdf8;">$</span>
-              <input type="number" id="quickRawPriceInput" value="${psa.rawPriceUsd}" style="width: 80px; padding: 6px 10px; background: #0f172a; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #ffffff; font-weight: 700;" step="1" oninput="quickRecalcModal('${card.id}')">
-              <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="resetQuickPrice('${card.id}')">リセット</button>
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">④ 想定純利益 (ROI)</div>
+              <div style="font-size: 1.3rem; font-weight: 800; color: var(--accent-emerald);">+${formatJpy(mProfit.netProfitJpy)}</div>
+              <div style="font-size: 0.75rem; color: #34d399; font-weight: 700;">+${mProfit.roiPercent}% (原価: ${formatJpy(item.purchaseCostJpy)})</div>
             </div>
           </div>
         </div>
 
-        <!-- 需給・流動性＆仕入れ供給 パネル -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
-          <!-- 国内売却可能性 -->
-          <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 16px;">
-            <div style="font-size: 0.82rem; color: #38bdf8; font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
-              ⚡ 国内需給・売却可能性 (直近1週間の売買実績)
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">直近7日の成約数</div>
-                <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">${liq.weeklySoldCount} <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">件</span></div>
-              </div>
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">現在の国内出品数</div>
-                <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">${liq.activeListingCount} <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">件</span></div>
-              </div>
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">週間消化率 (売れ行き)</div>
-                <div style="font-size: 1.15rem; font-weight: 800; color: #34d399;">${liq.sellThroughRate}%</div>
-              </div>
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">推定売却所要日数</div>
-                <div style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;">約 ${liq.estimatedDaysToSell} 日</div>
-              </div>
-            </div>
-            <div style="margin-top: 10px; font-size: 0.74rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
-              成約価格レンジ: <span style="color:#ffffff; font-weight:600;">${formatJpy(liq.priceRangeMin)} 〜 ${formatJpy(liq.priceRangeMax)}</span>
-            </div>
-          </div>
-
-          <!-- 海外eBay仕入れ可能性 -->
-          <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 16px;">
-            <div style="font-size: 0.82rem; color: #34d399; font-weight: 800; display: flex; align-items: center; gap: 6px; margin-bottom: 10px;">
-              📦 海外(eBay)仕入れ可能性・供給状況
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">eBayアクティブ出品数</div>
-                <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">${supply.ebayActiveListings} <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">件</span></div>
-              </div>
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">直近7日の落札数</div>
-                <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">${supply.ebayRecentSoldCount} <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">件</span></div>
-              </div>
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">供給評価</div>
-                <div style="font-size: 1.15rem; font-weight: 800; color: ${supply.supplyRating.includes('潤沢') || supply.supplyRating === '充足' ? '#34d399' : '#fbbf24'};">${supply.supplyRating}</div>
-              </div>
-              <div>
-                <div style="font-size: 0.72rem; color: var(--text-secondary);">仕入れ難易度</div>
-                <div style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;">${supply.isReadilyAvailable ? '即購入可能' : '入札・監視要'}</div>
-              </div>
-            </div>
-            <div style="margin-top: 10px; font-size: 0.74rem; color: var(--text-muted); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 6px;">
-              発送元: <span style="color:#ffffff;">${card.ebayItemLocation || '米国'}</span> | セラー評価: <span style="color:#ffffff;">${card.ebaySellerRating || '高評価'}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- PSA鑑定投資マトリックス -->
+        <!-- PSA鑑定メルカリ販売マトリックス -->
         <div class="psa-matrix-card">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <h3 style="font-size: 0.95rem; color: #c084fc; font-weight: 800; display: flex; align-items: center; gap: 6px;">
-              💎 PSA鑑定投資（素体仕入れ ➔ PSA10/9 化）損益シミュレーション
+            <h3 style="font-size: 0.95rem; color: #c084fc; font-weight: 800;">
+              💎 国内素体 ➔ PSA鑑定メルカリ販売（PSA10/9化）シミュレーション
             </h3>
             <span style="font-size: 0.78rem; color: #e2e8f0; background: rgba(168, 85, 247, 0.2); padding: 3px 8px; border-radius: 6px; font-weight: 700;">
-              アップサイド倍率: <span id="modalUpsideVal">${psa.upsideMultiplier}</span>倍
+              アップサイド倍率: ${psa.upsideMultiplier}倍
             </span>
           </div>
 
           <div class="psa-matrix-grid">
             <div class="market-box">
-              <div class="market-title">① 素体仕入れ＋鑑定総原価</div>
-              <div class="market-price" id="modalTotalGradedCost">${formatJpy(psa.totalGradedCostJpy)}</div>
-              <div class="market-net" id="modalRawCostSub">素体: $${psa.rawPriceUsd} (${formatJpy(psa.rawImportCost.totalCostJpy)}) + 鑑定料: ${formatJpy(psa.gradingFeeJpy)}</div>
+              <div class="market-title">① 素体仕入＋PSA日本鑑定料</div>
+              <div class="market-price">${formatJpy(psa.totalGradedCostJpy)}</div>
+              <div class="market-net">素体: ${formatJpy(psa.rawPriceJpy)} ＋ PSA鑑定料: ${formatJpy(psa.gradingFeeJpy)}</div>
             </div>
 
             <div class="market-box best-choice">
               <span class="best-badge">PSA10 (取得率: ${Math.round(psa.gemRate * 100)}%)</span>
-              <div class="market-title">② PSA10 獲得時の手取り＆純利</div>
+              <div class="market-title">② PSA10 メルカリ手取＆純利</div>
               <div class="market-price" style="color: var(--accent-emerald);">${formatJpy(psa.psa10SalePriceJpy)}</div>
-              <div style="font-weight: 800; color: #34d399; margin-top: 4px;" id="modalPsa10ProfitText">
+              <div style="font-weight: 800; color: #34d399; margin-top: 4px;">
                 純利: +${formatJpy(psa.psa10Profit.netProfitJpy)} (+${psa.psa10Profit.roiPercent}%)
               </div>
             </div>
 
             <div class="market-box">
-              <div class="market-title">③ PSA9 獲得時の手取り＆純利</div>
+              <div class="market-title">③ PSA9 メルカリ手取＆純利</div>
               <div class="market-price">${formatJpy(psa.psa9SalePriceJpy)}</div>
-              <div style="font-weight: 800; color: ${psa.psa9Profit.netProfitJpy >= 0 ? '#34d399' : '#fb7185'}; margin-top: 4px;" id="modalPsa9ProfitText">
+              <div style="font-weight: 800; color: ${psa.psa9Profit.netProfitJpy >= 0 ? '#34d399' : '#fb7185'}; margin-top: 4px;">
                 純利: ${psa.psa9Profit.netProfitJpy >= 0 ? '+' : ''}${formatJpy(psa.psa9Profit.netProfitJpy)} (${psa.psa9Profit.roiPercent}%)
               </div>
             </div>
 
             <div class="market-box" style="border-color: rgba(56, 189, 248, 0.4);">
               <div class="market-title">④ 加重平均 期待値 (EV)</div>
-              <div class="market-price" style="color: #38bdf8;" id="modalExpectedProfit">${formatJpy(psa.expectedProfitJpy)}</div>
-              <div style="font-weight: 800; color: #c084fc; margin-top: 4px;" id="modalExpectedRoi">
+              <div class="market-price" style="color: #38bdf8;">+${formatJpy(psa.expectedProfitJpy)}</div>
+              <div style="font-weight: 800; color: #c084fc; margin-top: 4px;">
                 期待ROI: +${psa.expectedRoiPercent}%
               </div>
             </div>
           </div>
         </div>
 
-        <!-- チャネル別手取り比較 -->
-        <div>
-          <h3 style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 12px; font-weight: 700;">
-            📊 国内通常販売チャネル別・手取り＆純利益比較 (仕入れ総額: <span style="color:#ffffff;">${formatJpy(analysis.importCost.totalCostJpy)}</span>)
-          </h3>
-          <div class="market-grid">
-            <div class="market-box ${analysis.bestChannel.key === 'mercari' ? 'best-choice' : ''}">
-              ${analysis.bestChannel.key === 'mercari' ? '<span class="best-badge">最高益</span>' : ''}
-              <div class="market-title">メルカリ (手数料10%)</div>
-              <div class="market-price">${formatJpy(card.mercariAvgPriceJpy)}</div>
-              <div class="market-net">手取: ${formatJpy(analysis.channels.mercari.netRevenueJpy)}</div>
-              <div style="font-weight: 800; color: var(--accent-emerald); margin-top: 6px;">
-                純利益: +${formatJpy(analysis.channels.mercari.netProfitJpy)} (${analysis.channels.mercari.roiPercent}%)
-              </div>
-            </div>
-
-            <div class="market-box ${analysis.bestChannel.key === 'yahoo' ? 'best-choice' : ''}">
-              ${analysis.bestChannel.key === 'yahoo' ? '<span class="best-badge">最高益</span>' : ''}
-              <div class="market-title">ヤフーフリマ (手数料5%)</div>
-              <div class="market-price">${formatJpy(card.yahooAvgPriceJpy)}</div>
-              <div class="market-net">手取: ${formatJpy(analysis.channels.yahoo.netRevenueJpy)}</div>
-              <div style="font-weight: 800; color: var(--accent-emerald); margin-top: 6px;">
-                純利益: +${formatJpy(analysis.channels.yahoo.netProfitJpy)} (${analysis.channels.yahoo.roiPercent}%)
-              </div>
-            </div>
-
-            <div class="market-box ${analysis.bestChannel.key === 'snkrdunk' ? 'best-choice' : ''}">
-              ${analysis.bestChannel.key === 'snkrdunk' ? '<span class="best-badge">最高益</span>' : ''}
-              <div class="market-title">スニーカーダンク (相場)</div>
-              <div class="market-price">${formatJpy(card.snkrdunkPriceJpy)}</div>
-              <div class="market-net">手取: ${formatJpy(analysis.channels.snkrdunk.netRevenueJpy)}</div>
-              <div style="font-weight: 800; color: var(--accent-emerald); margin-top: 6px;">
-                純利益: +${formatJpy(analysis.channels.snkrdunk.netProfitJpy)} (${analysis.channels.snkrdunk.roiPercent}%)
-              </div>
-            </div>
-
-            <div class="market-box ${analysis.bestChannel.key === 'torecaJapan' ? 'best-choice' : ''}">
-              ${analysis.bestChannel.key === 'torecaJapan' ? '<span class="best-badge">最高益</span>' : ''}
-              <div class="market-title">トレカジャパン買取 (即現金化)</div>
-              <div class="market-price">${formatJpy(analysis.channels.torecaJapan.salePriceJpy)}</div>
-              <div class="market-net">手数料・送料: 0円</div>
-              <div style="font-weight: 800; color: var(--accent-emerald); margin-top: 6px;">
-                純利益: +${formatJpy(analysis.channels.torecaJapan.netProfitJpy)} (${analysis.channels.torecaJapan.roiPercent}%)
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- スニーカーダンク vs トレカジャパン 推移チャート -->
-        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-glass); border-radius: 12px; padding: 20px;">
-          <h3 style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 12px; font-weight: 700;">
-            📈 スニーカーダンク成約推移 vs トレカジャパン価格履歴
-          </h3>
-          <div style="position: relative; height: 260px; width: 100%;">
-            <canvas id="marketTrendChart"></canvas>
-          </div>
-        </div>
-
-        <!-- 国内フリマでの実際の成約実績例 -->
+        <!-- メルカリ直近成約事例 -->
         <div class="sold-evidence-section">
           <h3 style="font-size: 0.95rem; color: var(--text-secondary); font-weight: 700;">
-            🏷️ 国内マーケットプレイスでの実際の成約実績例 (PSA10 / PSA9 / 素体)
+            🏷️ メルカリでの実際の成約実績（直近SOLDデータ）
           </h3>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px;">
-            <div>
-              <div style="font-size: 0.82rem; font-weight: 700; color: #ef4444; margin-bottom: 6px;">メルカリ 直近成約事例</div>
-              ${card.mercariSoldExamples ? card.mercariSoldExamples.map(ex => `
-                <div class="sold-item" style="margin-bottom: 8px;">
-                  <div>
-                    <div class="sold-item-title">${ex.title}</div>
-                    <div class="sold-item-cond">${ex.date} • ${ex.condition}</div>
-                  </div>
-                  <div class="sold-item-price">${formatJpy(ex.price)}</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
+            ${card.mercariSoldExamples ? card.mercariSoldExamples.map(ex => `
+              <div class="sold-item">
+                <div>
+                  <div class="sold-item-title">${ex.title}</div>
+                  <div class="sold-item-cond">${ex.date} • ${ex.condition}</div>
                 </div>
-              `).join('') : '<div style="color: var(--text-muted); font-size: 0.8rem;">実績データなし</div>'}
-            </div>
-
-            <div>
-              <div style="font-size: 0.82rem; font-weight: 700; color: #f59e0b; margin-bottom: 6px;">ヤフーフリマ 直近成約事例</div>
-              ${card.yahooSoldExamples ? card.yahooSoldExamples.map(ex => `
-                <div class="sold-item" style="margin-bottom: 8px;">
-                  <div>
-                    <div class="sold-item-title">${ex.title}</div>
-                    <div class="sold-item-cond">${ex.date} • ${ex.condition}</div>
-                  </div>
-                  <div class="sold-item-price">${formatJpy(ex.price)}</div>
-                </div>
-              `).join('') : '<div style="color: var(--text-muted); font-size: 0.8rem;">実績データなし</div>'}
-            </div>
+                <div class="sold-item-price">${formatJpy(ex.price)}</div>
+              </div>
+            `).join('') : '<div style="color: var(--text-muted); font-size: 0.8rem;">実績データなし</div>'}
           </div>
-        </div>
-
-        <!-- 投資戦略・仕入れメモ -->
-        <div style="background: rgba(30, 41, 59, 0.4); border-radius: 10px; padding: 14px; font-size: 0.85rem; border: 1px solid var(--border-glass);">
-          <div style="font-weight: 700; color: var(--accent-blue); margin-bottom: 4px;">💡 投資判断・需給流動性メモ</div>
-          <p style="color: #cbd5e1; line-height: 1.5;">${card.notes || '需給良好。海外からの仕入れ価格差を活かしたアービトラージが有効です。'}</p>
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 12px;">
-          <button class="btn btn-secondary" onclick="openSimulatorModal('${card.id}')">このカードでシミュレーション ➔</button>
+          <button class="btn btn-secondary" onclick="openSimulatorModal('${card.id}')">メルカリ試算シミュレーター ➔</button>
           <button class="btn btn-primary" onclick="closeModal()">閉じる</button>
         </div>
       </div>
     </div>
   `;
-
-  setTimeout(() => {
-    renderDetailChart(card);
-  }, 50);
 };
 
-// モーダル内クイック素体価格再試算
-window.quickRecalcModal = function(cardId) {
-  const card = state.cards.find(c => c.id === cardId);
-  if (!card) return;
-  const rawInput = document.getElementById('quickRawPriceInput');
-  if (!rawInput) return;
-  const newRawPrice = parseFloat(rawInput.value);
-  if (isNaN(newRawPrice) || newRawPrice <= 0) return;
-
-  const tempCard = { ...card, rawPriceUsd: newRawPrice };
-  const analysis = analyzeCardInvestment(tempCard, state.settings);
-  const psa = analysis.psaAnalysis;
-
-  const costEl = document.getElementById('modalTotalGradedCost');
-  if (costEl) costEl.textContent = formatJpy(psa.totalGradedCostJpy);
-
-  const subEl = document.getElementById('modalRawCostSub');
-  if (subEl) subEl.textContent = `素体: $${psa.rawPriceUsd} (${formatJpy(psa.rawImportCost.totalCostJpy)}) + 鑑定料: ${formatJpy(psa.gradingFeeJpy)}`;
-
-  const p10El = document.getElementById('modalPsa10ProfitText');
-  if (p10El) p10El.textContent = `純利: +${formatJpy(psa.psa10Profit.netProfitJpy)} (+${psa.psa10Profit.roiPercent}%)`;
-
-  const p9El = document.getElementById('modalPsa9ProfitText');
-  if (p9El) {
-    p9El.textContent = `純利: ${psa.psa9Profit.netProfitJpy >= 0 ? '+' : ''}${formatJpy(psa.psa9Profit.netProfitJpy)} (${psa.psa9Profit.roiPercent}%)`;
-    p9El.style.color = psa.psa9Profit.netProfitJpy >= 0 ? '#34d399' : '#fb7185';
-  }
-
-  const expEl = document.getElementById('modalExpectedProfit');
-  if (expEl) expEl.textContent = `+${formatJpy(psa.expectedProfitJpy)}`;
-
-  const roiEl = document.getElementById('modalExpectedRoi');
-  if (roiEl) roiEl.textContent = `期待ROI: +${psa.expectedRoiPercent}%`;
-
-  const upsideEl = document.getElementById('modalUpsideVal');
-  if (upsideEl) upsideEl.textContent = psa.upsideMultiplier;
-};
-
-window.resetQuickPrice = function(cardId) {
-  const card = state.cards.find(c => c.id === cardId);
-  if (!card) return;
-  const rawInput = document.getElementById('quickRawPriceInput');
-  if (rawInput) {
-    rawInput.value = card.rawPriceUsd;
-    quickRecalcModal(cardId);
-  }
-};
-
-function renderDetailChart(card) {
-  const ctx = document.getElementById('marketTrendChart');
-  if (!ctx) return;
-
-  if (state.chartInstance) {
-    state.chartInstance.destroy();
-  }
-
-  const labels = card.snkrdunkHistory ? card.snkrdunkHistory.map(h => h.date.slice(5)) : ['8/20', '8/27', '9/03', '9/10', '9/18'];
-  const snkrData = card.snkrdunkHistory ? card.snkrdunkHistory.map(h => h.price) : [];
-  const torecaData = card.torecaJapanHistory ? card.torecaJapanHistory.map(h => h.sellPrice) : [];
-
-  state.chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'スニーカーダンク 成約相場 (円)',
-          data: snkrData,
-          borderColor: '#38bdf8',
-          backgroundColor: 'rgba(56, 189, 248, 0.1)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.35,
-          pointBackgroundColor: '#38bdf8',
-          pointRadius: 4
-        },
-        {
-          label: 'トレカジャパン 店頭販売価格 (円)',
-          data: torecaData,
-          borderColor: '#10b981',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          borderDash: [5, 5],
-          tension: 0.35,
-          pointBackgroundColor: '#10b981',
-          pointRadius: 3
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: 'index',
-        intersect: false
-      },
-      plugins: {
-        legend: {
-          labels: {
-            color: '#94a3b8',
-            font: { family: 'Plus Jakarta Sans', size: 12 }
-          }
-        },
-        tooltip: {
-          backgroundColor: 'rgba(15, 23, 42, 0.95)',
-          titleColor: '#ffffff',
-          bodyColor: '#38bdf8',
-          borderColor: 'rgba(255,255,255,0.1)',
-          borderWidth: 1,
-          padding: 12,
-          callbacks: {
-            label: function(context) {
-              return `${context.dataset.label}: ¥${context.parsed.y.toLocaleString()}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#64748b' }
-        },
-        y: {
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: {
-            color: '#64748b',
-            callback: function(value) {
-              return '¥' + (value / 10000) + '万';
-            }
-          }
-        }
-      }
-    }
-  });
-}
-
+/**
+ * メルカリ損益シミュレーター モーダル
+ */
 window.openSimulatorModal = function(cardId) {
   const card = state.cards.find(c => c.id === cardId) || state.cards[0];
   const modalContainer = document.getElementById('modalContainer');
 
   modalContainer.innerHTML = `
     <div class="modal-overlay" onclick="closeModal(event)">
-      <div class="modal-card" style="max-width: 840px;" onclick="event.stopPropagation()">
+      <div class="modal-card" style="max-width: 760px;" onclick="event.stopPropagation()">
         <div class="modal-header">
           <div>
-            <h2 style="font-size: 1.35rem; font-weight: 800; color: #ffffff;">⚡ リアルタイム投資・PSA鑑定損益シミュレーター</h2>
-            <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">仕入れ形態（完成品 or 素体鑑定）や為替・販売先を動かして手取りと利益を即座に試算</div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: #ffffff;">⚡ メルカリ販売 損益シミュレーター</h2>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+              販売価格と仕入れ原価を入力するだけで、メルカリ手数料10%・送料¥210・梱包費¥50を引いた実質手取りと純利を即座に試算
+            </div>
           </div>
           <button class="modal-close-btn" onclick="closeModal()">✕</button>
         </div>
 
         <div class="simulator-box">
-          <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; color: #ffffff;">
-              <input type="radio" name="simMode" value="arbitrage" checked onchange="toggleSimMode('arbitrage')">
-              ① 通常アービトラージ (完成品転売)
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 700; cursor: pointer; color: #c084fc;">
-              <input type="radio" name="simMode" value="psa_grading" onchange="toggleSimMode('psa_grading')">
-              ② PSA鑑定投資 (素体 ➔ PSA10/9化)
-            </label>
-          </div>
-
-          <div class="form-group">
-            <label>対象カード選択</label>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label>対象カード選択 (プリセット読込)</label>
             <select id="simCardSelect" class="form-input" onchange="onSimCardChange(this.value)">
               ${state.cards.map(c => `<option value="${c.id}" ${c.id === card.id ? 'selected' : ''}>${c.name} (${c.grade})</option>`).join('')}
             </select>
@@ -1482,40 +1055,27 @@ window.openSimulatorModal = function(cardId) {
 
           <div class="simulator-form-grid">
             <div class="form-group">
-              <label id="simPriceLabel">仕入れ価格 ($)</label>
-              <input type="number" id="simEbayPrice" class="form-input" value="${card.ebayPriceUsd}" oninput="recalcSimulator()">
+              <label>仕入れ原価 (円)</label>
+              <input type="number" id="simCostPrice" class="form-input" value="${card.rawPriceJpy || 3500}" step="100" oninput="recalcSimulator()">
             </div>
             <div class="form-group">
-              <label>国際送料 ($)</label>
-              <input type="number" id="simEbayShipping" class="form-input" value="${card.ebayShippingUsd || 30}" oninput="recalcSimulator()">
-            </div>
-            <div class="form-group" id="gradingFeeGroup" style="display: none;">
-              <label>PSA鑑定代行料 (円)</label>
-              <input type="number" id="simGradingFee" class="form-input" value="${card.gradingFeeJpy || 3500}" oninput="recalcSimulator()">
+              <label>メルカリ想定販売価格 (円)</label>
+              <input type="number" id="simSalePrice" class="form-input" value="${card.mercariAvgPriceJpy || 18000}" step="500" oninput="recalcSimulator()">
             </div>
             <div class="form-group">
-              <label>為替レート (USD/JPY)</label>
-              <input type="number" id="simUsdRate" class="form-input" value="${state.settings.usdJpyRate}" step="0.5" oninput="recalcSimulator()">
+              <label>メルカリ販売手数料 (%)</label>
+              <input type="number" class="form-input" value="10" readonly style="opacity: 0.7;">
             </div>
             <div class="form-group">
-              <label>国内販売先プラットフォーム</label>
-              <select id="simPlatform" class="form-input" onchange="recalcSimulator()">
-                <option value="yahoo">ヤフーフリマ (手数料5%)</option>
-                <option value="mercari">メルカリ (手数料10%)</option>
-                <option value="snkrdunk">スニーカーダンク (手数料5.5%)</option>
-                <option value="torecaJapan">トレカショップ買取 (手数料0%)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label id="simSalePriceLabel">想定国内販売価格 (円)</label>
-              <input type="number" id="simSalePrice" class="form-input" value="${card.yahooAvgPriceJpy || card.snkrdunkPriceJpy}" step="1000" oninput="recalcSimulator()">
+              <label>送料 (らくらくメルカリ便 ネコポス)</label>
+              <input type="number" class="form-input" value="210" readonly style="opacity: 0.7;">
             </div>
           </div>
 
           <div class="sim-result-card" id="simResultArea"></div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
           <button class="btn btn-primary" onclick="closeModal()">閉じる</button>
         </div>
       </div>
@@ -1523,82 +1083,52 @@ window.openSimulatorModal = function(cardId) {
   `;
 
   recalcSimulator();
-}
-
-window.toggleSimMode = function(mode) {
-  const cardId = document.getElementById('simCardSelect').value;
-  const card = state.cards.find(c => c.id === cardId) || state.cards[0];
-  const gradingFeeGroup = document.getElementById('gradingFeeGroup');
-  const priceLabel = document.getElementById('simPriceLabel');
-
-  if (mode === 'psa_grading') {
-    gradingFeeGroup.style.display = 'flex';
-    priceLabel.textContent = '素体(Raw)仕入れ価格 ($)';
-    document.getElementById('simEbayPrice').value = card.rawPriceUsd || Math.round(card.ebayPriceUsd * 0.45);
-    document.getElementById('simSalePrice').value = card.psa10PriceJpy || card.snkrdunkPriceJpy;
-  } else {
-    gradingFeeGroup.style.display = 'none';
-    priceLabel.textContent = 'eBay仕入れ価格 ($)';
-    document.getElementById('simEbayPrice').value = card.ebayPriceUsd;
-    document.getElementById('simSalePrice').value = card.yahooAvgPriceJpy || card.snkrdunkPriceJpy;
-  }
-  recalcSimulator();
-}
+};
 
 window.onSimCardChange = function(cardId) {
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
-  const mode = document.querySelector('input[name="simMode"]:checked').value;
-  toggleSimMode(mode);
-}
+  document.getElementById('simCostPrice').value = card.rawPriceJpy || 3500;
+  document.getElementById('simSalePrice').value = card.mercariAvgPriceJpy || 18000;
+  recalcSimulator();
+};
 
 window.recalcSimulator = function() {
-  const modeEl = document.querySelector('input[name="simMode"]:checked');
-  const mode = modeEl ? modeEl.value : 'arbitrage';
-  const ebayPrice = parseFloat(document.getElementById('simEbayPrice').value) || 0;
-  const ebayShipping = parseFloat(document.getElementById('simEbayShipping').value) || 0;
-  const gradingFee = mode === 'psa_grading' ? (parseFloat(document.getElementById('simGradingFee').value) || 3500) : 0;
-  const usdRate = parseFloat(document.getElementById('simUsdRate').value) || 150;
-  const platform = document.getElementById('simPlatform').value;
-  const salePrice = parseFloat(document.getElementById('simSalePrice').value) || 0;
-
-  const tempSettings = { ...state.settings, usdJpyRate: usdRate };
-  const importCost = calculateImportCost(ebayPrice, ebayShipping, tempSettings);
-  const totalCost = importCost.totalCostJpy + gradingFee;
-  const saleProfit = calculateDomesticSaleProfit(salePrice, totalCost, platform, tempSettings);
-
+  const cost = parseFloat(document.getElementById('simCostPrice').value) || 0;
+  const sale = parseFloat(document.getElementById('simSalePrice').value) || 0;
   const resultArea = document.getElementById('simResultArea');
   if (!resultArea) return;
 
-  const isProfit = saleProfit.netProfitJpy >= 0;
+  const profit = calculateMercariProfit(sale, cost);
+  const isProfit = profit.netProfitJpy >= 0;
 
   resultArea.innerHTML = `
     <div style="text-align: center;">
-      <div style="font-size: 0.78rem; color: var(--text-secondary);">仕入れ総原価 (円換算)</div>
-      <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">${formatJpy(totalCost)}</div>
-      <div style="font-size: 0.7rem; color: var(--text-muted);">${mode === 'psa_grading' ? `仕入:${formatJpy(importCost.totalCostJpy)} + 鑑定:${formatJpy(gradingFee)}` : `本体:${formatJpy(importCost.itemCostJpy)} / 税:${formatJpy(importCost.importTaxJpy)}`}</div>
+      <div style="font-size: 0.78rem; color: var(--text-secondary);">仕入れ原価</div>
+      <div style="font-size: 1.25rem; font-weight: 800; color: #ffffff;">${formatJpy(profit.purchaseCostJpy)}</div>
+      <div style="font-size: 0.7rem; color: var(--text-muted);">カドショ/フリマ等</div>
     </div>
     <div style="text-align: center;">
-      <div style="font-size: 0.78rem; color: var(--text-secondary);">販売手取り額</div>
-      <div style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${formatJpy(saleProfit.netRevenueJpy)}</div>
-      <div style="font-size: 0.7rem; color: var(--text-muted);">手数料(${saleProfit.feeRatePercent}%): ${formatJpy(saleProfit.platformFeeJpy)}</div>
+      <div style="font-size: 0.78rem; color: var(--text-secondary);">メルカリ実質手取り額</div>
+      <div style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${formatJpy(profit.netRevenueJpy)}</div>
+      <div style="font-size: 0.7rem; color: var(--text-muted);">手数料(${formatJpy(profit.platformFeeJpy)}) + 送料(¥210) 控除後</div>
     </div>
     <div style="text-align: center;">
       <div style="font-size: 0.78rem; color: var(--text-secondary);">想定純利益 (ROI)</div>
       <div style="font-size: 1.45rem; font-weight: 800; color: ${isProfit ? 'var(--accent-emerald)' : 'var(--accent-rose)'};">
-        ${isProfit ? '+' : ''}${formatJpy(saleProfit.netProfitJpy)}
+        ${isProfit ? '+' : ''}${formatJpy(profit.netProfitJpy)}
       </div>
       <div style="font-size: 0.85rem; font-weight: 700; color: ${isProfit ? '#34d399' : '#fb7185'};">
-        ${isProfit ? '+' : ''}${saleProfit.roiPercent}%
+        ${isProfit ? '+' : ''}${profit.roiPercent}%
       </div>
     </div>
     <div style="text-align: center;">
       <div style="font-size: 0.78rem; color: var(--text-secondary);">損益分岐点 (BEP)</div>
-      <div style="font-size: 1.15rem; font-weight: 700; color: #f59e0b;">${formatJpy(saleProfit.breakEvenPriceJpy)}</div>
+      <div style="font-size: 1.15rem; font-weight: 700; color: #f59e0b;">${formatJpy(profit.breakEvenPriceJpy)}</div>
       <div style="font-size: 0.7rem; color: var(--text-muted);">これ以上で売れば黒字</div>
     </div>
   `;
-}
+};
 
 window.openAddCardModal = function() {
   const modalContainer = document.getElementById('modalContainer');
@@ -1608,7 +1138,7 @@ window.openAddCardModal = function() {
         <div class="modal-header">
           <div>
             <h2 style="font-size: 1.3rem; font-weight: 800; color: #ffffff;">➕ 新規リサーチカードの追加</h2>
-            <div style="font-size: 0.8rem; color: var(--text-secondary);">気になるカードの相場情報を入力して投資・PSA分析リストに登録</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary);">国内で仕入れてメルカリで販売したいカードを登録</div>
           </div>
           <button class="modal-close-btn" onclick="closeModal()">✕</button>
         </div>
@@ -1626,32 +1156,28 @@ window.openAddCardModal = function() {
             <div class="form-group">
               <label>グレード / 状態</label>
               <select id="newCardGrade" class="form-input">
-                <option value="PSA10">PSA10 (最高鑑定)</option>
-                <option value="Raw (未鑑定/NM)">Raw (未鑑定 / NearMint)</option>
+                <option value="Raw (未鑑定/NM)">Raw (未鑑定 / 美品NM)</option>
+                <option value="PSA10">PSA10 (鑑定品)</option>
               </select>
             </div>
             <div class="form-group">
-              <label>eBay仕入れ想定価格 ($) *</label>
-              <input type="number" id="newEbayPrice" class="form-input" placeholder="例: 450" required>
+              <label>カドショ仕入れ想定価格 (円) *</label>
+              <input type="number" id="newRawPrice" class="form-input" placeholder="例: 15000" required>
             </div>
             <div class="form-group">
-              <label>素体(Raw)仕入れ価格 ($)</label>
-              <input type="number" id="newRawPrice" class="form-input" placeholder="例: 200">
+              <label>メルカリ想定販売価格 (円) *</label>
+              <input type="number" id="newMercariPrice" class="form-input" placeholder="例: 24000" required>
             </div>
             <div class="form-group">
-              <label>スニーカーダンク(PSA10)相場 (円) *</label>
-              <input type="number" id="newSnkrPrice" class="form-input" placeholder="例: 95000" required>
+              <label>PSA10 メルカリ想定価格 (円)</label>
+              <input type="number" id="newPsa10Price" class="form-input" placeholder="例: 48000">
             </div>
             <div class="form-group">
-              <label>PSA9 想定価格 (円)</label>
-              <input type="number" id="newPsa9Price" class="form-input" placeholder="例: 52000">
+              <label>PSA9 メルカリ想定価格 (円)</label>
+              <input type="number" id="newPsa9Price" class="form-input" placeholder="例: 22000">
             </div>
-            <div class="form-group">
-              <label>ヤフーフリマ想定価格 (円)</label>
-              <input type="number" id="newYahooPrice" class="form-input" placeholder="例: 92000">
-            </div>
-            <div class="form-group">
-              <label>画像URL (省略時は公式画像)</label>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>画像URL (省略時はサンプル画像)</label>
               <input type="text" id="newImageUrl" class="form-input" placeholder="https://images.pokemontcg.io/...">
             </div>
           </div>
@@ -1664,18 +1190,17 @@ window.openAddCardModal = function() {
       </div>
     </div>
   `;
-}
+};
 
 window.handleCreateCard = function(e) {
   e.preventDefault();
   const name = document.getElementById('newCardName').value.trim();
   const cardSet = document.getElementById('newCardSet').value.trim() || 'ポケモンカードゲーム';
   const grade = document.getElementById('newCardGrade').value;
-  const ebayPriceUsd = parseFloat(document.getElementById('newEbayPrice').value) || 0;
-  const rawPriceUsd = parseFloat(document.getElementById('newRawPrice').value) || (ebayPriceUsd * 0.45);
-  const snkrPrice = parseFloat(document.getElementById('newSnkrPrice').value) || 0;
-  const psa9Price = parseFloat(document.getElementById('newPsa9Price').value) || (snkrPrice * 0.55);
-  const yahooPrice = parseFloat(document.getElementById('newYahooPrice').value) || snkrPrice * 0.98;
+  const rawPriceJpy = parseFloat(document.getElementById('newRawPrice').value) || 0;
+  const mercariPrice = parseFloat(document.getElementById('newMercariPrice').value) || 0;
+  const psa10Price = parseFloat(document.getElementById('newPsa10Price').value) || (mercariPrice * 2.2);
+  const psa9Price = parseFloat(document.getElementById('newPsa9Price').value) || (mercariPrice * 0.95);
   const imageUrl = document.getElementById('newImageUrl').value.trim() || 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?w=500&auto=format&fit=crop&q=60';
 
   const newCard = {
@@ -1687,58 +1212,24 @@ window.handleCreateCard = function(e) {
     grade,
     imageUrl,
     fallbackImageUrl: imageUrl,
-    ebayBuyUrl: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(name + ' japanese raw')}&_sop=15`,
-    snkrdunkUrl: `https://snkrdunk.com/search?keywords=${encodeURIComponent(name)}`,
     mercariSoldUrl: `https://jp.mercari.com/search?keyword=${encodeURIComponent(name)}&status=sold_out`,
-    yahooSoldUrl: `https://paypayfleamarket.yahoo.co.jp/search/${encodeURIComponent(name)}`,
-    ebayPriceUsd,
-    ebayShippingUsd: 30,
-    rawPriceUsd,
-    rawShippingUsd: 20,
-    rawPriceJpy: Math.round(rawPriceUsd * state.settings.usdJpyRate),
+    rawPriceJpy,
+    rawPriceUsd: Math.round(rawPriceJpy / 150),
     psa9PriceJpy: psa9Price,
-    psa10PriceJpy: snkrPrice,
+    psa10PriceJpy: psa10Price,
     psa10GemRate: 0.75,
     gradingFeeJpy: 3500,
-    ebaySellerRating: '100%',
-    ebayItemLocation: 'United States',
-    snkrdunkPriceJpy: snkrPrice,
-    torecaJapanPriceJpy: snkrPrice * 0.9,
-    mercariAvgPriceJpy: snkrPrice,
-    yahooAvgPriceJpy: yahooPrice,
-    demandScore: 80,
-    liquiditySpeedDays: 4.0,
-    priceTrend30d: +5.0,
-    domesticMarketLiquidity: {
-      weeklySoldCount: 12,
-      activeListingCount: 15,
-      sellThroughRate: 80.0,
-      estimatedDaysToSell: 3.5,
-      priceRangeMin: snkrPrice * 0.95,
-      priceRangeMax: snkrPrice * 1.05
-    },
-    supplyStatus: {
-      ebayActiveListings: 8,
-      ebayRecentSoldCount: 10,
-      supplyRating: '充足',
-      isReadilyAvailable: true
-    },
-    snkrdunkHistory: [
-      { date: '2026-08-20', price: snkrPrice * 0.9, volume: 5 },
-      { date: '2026-09-18', price: snkrPrice, volume: 8 }
-    ],
-    torecaJapanHistory: [
-      { date: '2026-08-20', buyPrice: snkrPrice * 0.75, sellPrice: snkrPrice * 0.9 },
-      { date: '2026-09-18', buyPrice: snkrPrice * 0.8, sellPrice: snkrPrice * 0.92 }
-    ],
+    mercariAvgPriceJpy: mercariPrice,
+    snkrdunkPriceJpy: mercariPrice,
+    domesticSold7d: 15,
+    domesticActiveListings: 18,
+    sellThroughRate7d: 83.3,
+    estimatedTurnoverDays: 3.0,
     mercariSoldExamples: [
-      { date: '2026-09-17', price: snkrPrice, condition: '美品・即購入可能', title: `${name} ${grade}` }
+      { date: '2026-09-28', price: mercariPrice, condition: '美品・即購入OK', title: `${name} ${grade}` }
     ],
-    yahooSoldExamples: [
-      { date: '2026-09-16', price: yahooPrice, condition: '美品・送料無料', title: `${name} ${grade}` }
-    ],
-    tags: [grade, 'ユーザー追加', '要監視'],
-    notes: 'ユーザーによって新規追加されたリサーチカードです。'
+    tags: [grade, 'ユーザー追加', 'メルカリ販売'],
+    notes: '国内カドショ仕入れからメルカリ販売用に登録されたカードです。'
   };
 
   state.cards.unshift(newCard);
@@ -1747,7 +1238,7 @@ window.handleCreateCard = function(e) {
   localStorage.setItem('poke_custom_cards', JSON.stringify(currentCustom));
   closeModal();
   renderApp();
-}
+};
 
 window.closeModal = function(e) {
   if (e && e.target && !e.target.classList.contains('modal-overlay') && !e.target.classList.contains('modal-close-btn')) {
@@ -1759,26 +1250,24 @@ window.closeModal = function(e) {
     state.chartInstance.destroy();
     state.chartInstance = null;
   }
-}
+};
 
 function exportToCsv() {
   const analyzed = state.cards.map(c => analyzeCardInvestment(c, state.settings));
-  let csv = 'カード名,セット,グレード,需給スコア,通常判定,eBay価格($),総仕入れ原価(円),推奨販売先,直近7日成約数,現在出品数,週間消化率(%),推定売却日数,eBay出品数,PSA10売価(円),PSA10純利益(円),PSA9純利益(円),PSA10期待率,期待値ROI(%)\n';
+  let csv = 'カード名,セット,グレード,仕入れ原価(円),メルカリ想定売価(円),メルカリ手取り額(円),純利益(円),粗利率(%),直近7日成約数,週間消化率(%),PSA10売価(円),PSA10純利益(円)\n';
   
   analyzed.forEach(item => {
-    const ch = item.bestChannel.data;
+    const m = item.mercariProfit;
     const psa = item.psaAnalysis;
-    const liq = item.card.domesticMarketLiquidity || { weeklySoldCount: 0, activeListingCount: 0, sellThroughRate: 0, estimatedDaysToSell: 0 };
-    const supply = item.card.supplyStatus || { ebayActiveListings: 0 };
-
-    csv += `"${item.card.name}","${item.card.cardSet}","${item.card.grade}",${item.overallScore},"${item.rank}",${item.card.ebayPriceUsd},${item.importCost.totalCostJpy},"${ch.platformName}",${liq.weeklySoldCount},${liq.activeListingCount},"${liq.sellThroughRate}%",${liq.estimatedDaysToSell},${supply.ebayActiveListings},${psa.psa10SalePriceJpy},${psa.psa10Profit.netProfitJpy},${psa.psa9Profit.netProfitJpy},"${Math.round(psa.gemRate * 100)}%","${psa.expectedRoiPercent}%"\n`;
+    const liq = item.liquidity;
+    csv += `"${item.card.name}","${item.card.cardSet}","${item.card.grade}",${item.purchaseCostJpy},${m.salePriceJpy},${m.netRevenueJpy},${m.netProfitJpy},"${m.roiPercent}%",${liq.sold7d},"${liq.sellThroughRate}%",${psa.psa10SalePriceJpy},${psa.psa10Profit.netProfitJpy}\n`;
   });
 
   const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `poke_arbitrage_analysis_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `mercari_pokemon_investment_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
