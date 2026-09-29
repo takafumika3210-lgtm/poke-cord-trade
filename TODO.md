@@ -44,11 +44,12 @@
 - [x] 一覧テーブルおよび詳細モーダル (`src/app.js`) のメルカリ表示最適化
   - 全て日本円表示に統一（ドル表示を完全排除）
   - メルカリ手取り額、メルカリ7日成約数・消化率、出品用コピー機能を全面配置
-## フェーズ12: GitHub Pages デプロイ設定 (進行中)
+## フェーズ12: GitHub Pages デプロイ設定 (完了)
 - [x] `.github/workflows/deploy.yml` (GitHub Pages自動デプロイワークフロー) の作成
 - [x] `.gitignore` の整備
 - [x] リモートリポジトリ登録 & `main` ブランチへの push 完了 (`takafumika3210-lgtm/poke-cord-trade`)
-- [ ] GitHub Pagesの設定有効化 (Settings > Pages > Source を GitHub Actions に設定)
+- [x] GitHub Pagesの設定有効化 (GitHub Actions経由)
+- [x] Web本番公開完了: `https://takafumika3210-lgtm.github.io/poke-cord-trade/` (HTTP 200 OK)
 
 ---
 
