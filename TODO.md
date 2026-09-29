@@ -44,8 +44,11 @@
 - [x] 一覧テーブルおよび詳細モーダル (`src/app.js`) のメルカリ表示最適化
   - 全て日本円表示に統一（ドル表示を完全排除）
   - メルカリ手取り額、メルカリ7日成約数・消化率、出品用コピー機能を全面配置
-- [x] CSS (`src/style.css`) の調整
-- [x] サーバー動作確認・Gitコミット
+## フェーズ12: GitHub Pages デプロイ設定 (進行中)
+- [x] `.github/workflows/deploy.yml` (GitHub Pages自動デプロイワークフロー) の作成
+- [x] `.gitignore` の整備
+- [ ] ユーザーによるGitHubリモートリポジトリの作成 ＆ push
+- [ ] GitHub Pagesの設定有効化 (GitHub Actions経由)
 
 ---
 
