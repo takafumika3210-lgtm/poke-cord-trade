@@ -1,4 +1,5 @@
 import { INITIAL_CARDS, DEFAULT_SETTINGS, DATA_META } from './data.js';
+import { TOURNAMENT_DECKS } from './deckData.js';
 import { 
   calculateImportCost, 
   calculateDomesticSaleProfit, 
@@ -9,8 +10,9 @@ import {
 
 let state = {
   cards: INITIAL_CARDS,
+  decks: TOURNAMENT_DECKS,
   settings: JSON.parse(localStorage.getItem('poke_settings')) || DEFAULT_SETTINGS,
-  activeTab: 'arbitrage', // 'arbitrage' | 'psa_grading'
+  activeTab: 'arbitrage', // 'arbitrage' | 'psa_grading' | 'tournament_decks'
   filterGrade: 'all',
   filterBudget: 'all', // 'all' | 'under_30k' | 'under_50k' | 'under_100k' | 'over_100k'
   sortBy: 'score', // 'score' | 'liquidity' | 'sold_count' | 'ebay_supply' | 'psa_roi' | 'upside' | 'profit' | 'roi' | 'trend'
@@ -92,20 +94,38 @@ function setupEventListeners() {
     });
   }
 
-  // 戦略タブ切替 (アービトラージ vs PSA鑑定)
+  // 戦略タブ切替 (アービトラージ vs PSA鑑定 vs 優勝デッキ再現販売)
   const tabArbitrage = document.getElementById('tabArbitrage');
   const tabPsaGrading = document.getElementById('tabPsaGrading');
-  if (tabArbitrage && tabPsaGrading) {
+  const tabTournamentDecks = document.getElementById('tabTournamentDecks');
+
+  const updateTabUI = (activeId) => {
+    [tabArbitrage, tabPsaGrading, tabTournamentDecks].forEach(tab => {
+      if (tab) {
+        if (tab.id === activeId) tab.classList.add('active');
+        else tab.classList.remove('active');
+      }
+    });
+  };
+
+  if (tabArbitrage) {
     tabArbitrage.addEventListener('click', () => {
       state.activeTab = 'arbitrage';
-      tabArbitrage.classList.add('active');
-      tabPsaGrading.classList.remove('active');
+      updateTabUI('tabArbitrage');
       renderApp();
     });
+  }
+  if (tabPsaGrading) {
     tabPsaGrading.addEventListener('click', () => {
       state.activeTab = 'psa_grading';
-      tabPsaGrading.classList.add('active');
-      tabArbitrage.classList.remove('active');
+      updateTabUI('tabPsaGrading');
+      renderApp();
+    });
+  }
+  if (tabTournamentDecks) {
+    tabTournamentDecks.addEventListener('click', () => {
+      state.activeTab = 'tournament_decks';
+      updateTabUI('tabTournamentDecks');
       renderApp();
     });
   }
@@ -115,7 +135,11 @@ function setupEventListeners() {
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       state.searchQuery = e.target.value.toLowerCase();
-      renderTable();
+      if (state.activeTab === 'tournament_decks') {
+        renderDeckView();
+      } else {
+        renderTable();
+      }
     });
   }
 
@@ -124,7 +148,11 @@ function setupEventListeners() {
   if (budgetFilter) {
     budgetFilter.addEventListener('change', (e) => {
       state.filterBudget = e.target.value;
-      renderTable();
+      if (state.activeTab === 'tournament_decks') {
+        renderDeckView();
+      } else {
+        renderTable();
+      }
     });
   }
 
@@ -142,7 +170,11 @@ function setupEventListeners() {
   if (sortFilter) {
     sortFilter.addEventListener('change', (e) => {
       state.sortBy = e.target.value;
-      renderTable();
+      if (state.activeTab === 'tournament_decks') {
+        renderDeckView();
+      } else {
+        renderTable();
+      }
     });
   }
 
@@ -170,9 +202,21 @@ function setupEventListeners() {
 }
 
 function renderApp() {
-  renderKPIs();
-  renderTableHeader();
-  renderTable();
+  const cardTableContainer = document.getElementById('cardTableContainer');
+  const deckViewContainer = document.getElementById('deckViewContainer');
+
+  if (state.activeTab === 'tournament_decks') {
+    if (cardTableContainer) cardTableContainer.style.display = 'none';
+    if (deckViewContainer) deckViewContainer.style.display = 'block';
+    renderDeckKPIs();
+    renderDeckView();
+  } else {
+    if (cardTableContainer) cardTableContainer.style.display = 'block';
+    if (deckViewContainer) deckViewContainer.style.display = 'none';
+    renderKPIs();
+    renderTableHeader();
+    renderTable();
+  }
 }
 
 function renderKPIs() {
@@ -212,6 +256,31 @@ function renderKPIs() {
   }
 
   document.getElementById('kpiCardCount').textContent = totalCount + ' 枚';
+}
+
+function renderDeckKPIs() {
+  const decks = state.decks;
+  const totalCount = decks.length;
+
+  const profits = decks.map(d => {
+    const netRevenue = d.pricing.recommendedSalePriceJpy * (1 - d.pricing.mercariFeeRate) - d.pricing.shippingJpy;
+    return netRevenue - d.pricing.partsCostJpy;
+  });
+  const maxProfit = Math.max(...profits);
+  const avgProfit = Math.round(profits.reduce((a, b) => a + b, 0) / totalCount);
+
+  document.getElementById('kpiCardCount').textContent = totalCount + ' 構築';
+
+  document.getElementById('kpiLabel2').textContent = '1デッキあたり 平均純利益';
+  document.getElementById('kpiSub2').textContent = 'メルカリ販売(手数料10%+送料込)';
+  document.getElementById('kpiAvgRoi').textContent = `+${formatJpy(avgProfit)}`;
+
+  document.getElementById('kpiLabel3').textContent = '最高純利デッキ';
+  document.getElementById('kpiMaxProfit').textContent = `+${formatJpy(maxProfit)}`;
+
+  document.getElementById('kpiLabel4').textContent = '👑 環境シェア1位';
+  document.getElementById('kpiSub4').textContent = 'CL宮城優勝・シェア17.4%';
+  document.getElementById('kpiHighRankCount').textContent = 'ドラパルトex';
 }
 
 function renderTableHeader() {
@@ -476,6 +545,436 @@ function renderTable() {
     tbody.appendChild(tr);
   });
 }
+
+/**
+ * 優勝デッキ再現販売ビューのレンダリング
+ */
+function renderDeckView() {
+  const container = document.getElementById('deckGrid');
+  if (!container) return;
+
+  let decks = [...state.decks];
+
+  if (state.searchQuery) {
+    decks = decks.filter(d => 
+      d.name.toLowerCase().includes(state.searchQuery) ||
+      d.tournamentAchievement.toLowerCase().includes(state.searchQuery) ||
+      d.archetype.toLowerCase().includes(state.searchQuery)
+    );
+  }
+
+  container.innerHTML = '';
+
+  if (decks.length === 0) {
+    container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted); grid-column: 1 / -1;">該当する大会優勝デッキが見つかりませんでした。</div>`;
+    return;
+  }
+
+  decks.forEach(deck => {
+    const p = deck.pricing;
+    const mercariNet = Math.round(p.recommendedSalePriceJpy * (1 - p.mercariFeeRate) - p.shippingJpy);
+    const mercariProfit = mercariNet - p.partsCostJpy;
+    const roi = parseFloat(((mercariProfit / p.partsCostJpy) * 100).toFixed(1));
+
+    const cardEl = document.createElement('div');
+    cardEl.className = 'deck-card';
+    cardEl.innerHTML = `
+      <div>
+        <div class="deck-card-header">
+          <div>
+            <span class="badge deck-tier-badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4);">
+              ${deck.tier}
+            </span>
+            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; margin-left: 6px;">
+              シェア ${deck.sharePercent}%
+            </span>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: #ffffff; margin-top: 8px;">
+              ${deck.name}
+            </h3>
+            <div style="font-size: 0.78rem; color: #cbd5e1; margin-top: 2px;">
+              🏆 ${deck.tournamentAchievement}
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px; font-size: 0.78rem; color: #fbbf24; font-weight: 700;">
+          ${deck.bannerTag}
+        </div>
+
+        <!-- なぜ売れるか 要約ボックス -->
+        <div class="deck-why-box" style="margin-top: 10px;">
+          <div style="font-weight: 800; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+            💡 なぜ売れるのか（需要の核心）
+          </div>
+          <div>${deck.whyItSells.coreReason}</div>
+          <div style="margin-top: 6px; font-size: 0.74rem; color: #34d399; font-weight: 600;">
+            ⚡ 売却速度目安: ${deck.whyItSells.turnoverSpeed}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <!-- 価格・利益ストリップ -->
+        <div class="deck-price-strip">
+          <div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary);">パーツ仕入れ原価</div>
+            <div style="font-size: 1.05rem; font-weight: 800; color: #ffffff;">${formatJpy(p.partsCostJpy)}</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted);">60枚+スリーブ込</div>
+          </div>
+          <div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary);">推奨販売価格</div>
+            <div style="font-size: 1.05rem; font-weight: 800; color: #38bdf8;">${formatJpy(p.recommendedSalePriceJpy)}</div>
+            <div style="font-size: 0.68rem; color: var(--text-muted);">(即売れ: ${formatJpy(p.quickSalePriceJpy)})</div>
+          </div>
+          <div>
+            <div style="font-size: 0.7rem; color: var(--text-secondary);">想定純利益 (ROI)</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: var(--accent-emerald);">+${formatJpy(mercariProfit)}</div>
+            <div style="font-size: 0.72rem; color: #34d399; font-weight: 700;">+${roi}%</div>
+          </div>
+        </div>
+
+        <!-- アクションボタン -->
+        <div class="deck-action-row" style="margin-top: 14px;">
+          <button class="btn btn-secondary" style="flex: 1; padding: 8px 12px; font-size: 0.8rem;" onclick="openDeckDetailModal('${deck.id}')">
+            📊 なぜ売れるか分析 ＆ レシピ ➔
+          </button>
+          <button class="btn btn-primary" style="flex: 1; padding: 8px 12px; font-size: 0.8rem; background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);" onclick="openDeckDetailModal('${deck.id}', true)">
+            📸 出品用画像を生成 ➔
+          </button>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(cardEl);
+  });
+}
+
+/**
+ * デッキ詳細モーダル（なぜ売れるか徹底解説、パーツ原価明細、Canvas出品画像生成ジェネレーター）
+ */
+window.openDeckDetailModal = function(deckId, scrollToGenerator = false) {
+  const deck = state.decks.find(d => d.id === deckId);
+  if (!deck) return;
+
+  const p = deck.pricing;
+  const mercariNet = Math.round(p.recommendedSalePriceJpy * (1 - p.mercariFeeRate) - p.shippingJpy);
+  const mercariProfit = mercariNet - p.partsCostJpy;
+  const roi = parseFloat(((mercariProfit / p.partsCostJpy) * 100).toFixed(1));
+
+  const modalContainer = document.getElementById('modalContainer');
+  modalContainer.innerHTML = `
+    <div class="modal-overlay" onclick="closeModal(event)">
+      <div class="modal-card" style="max-width: 950px;" onclick="event.stopPropagation()">
+        <!-- Header -->
+        <div class="modal-header">
+          <div>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #a855f7;">
+                ${deck.tier}
+              </span>
+              <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                環境シェア ${deck.sharePercent}%
+              </span>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+                粗利率 +${roi}%
+              </span>
+            </div>
+            <h2 style="font-size: 1.45rem; font-weight: 800; color: #ffffff; margin-top: 6px;">
+              ${deck.name}
+            </h2>
+            <div style="font-size: 0.82rem; color: #cbd5e1; margin-top: 2px;">
+              🏆 ${deck.tournamentAchievement} • 【戦術】${deck.archetype}
+            </div>
+          </div>
+          <button class="modal-close-btn" onclick="closeModal()">✕</button>
+        </div>
+
+        <!-- 💡 なぜ売れるか？ 徹底需要分析パネル -->
+        <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 14px; padding: 18px;">
+          <h3 style="font-size: 1.05rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+            💡 なぜ売れるのか？ 3大需要ドライバー ＆ ターゲット層分析
+          </h3>
+          <p style="font-size: 0.88rem; color: #e2e8f0; margin-top: 8px; line-height: 1.6;">
+            <strong>【コアとなる理由】</strong>: ${deck.whyItSells.coreReason}
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 14px;">
+            ${deck.whyItSells.demandDrivers.map((driver, idx) => `
+              <div style="background: rgba(30, 41, 59, 0.5); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="font-size: 0.84rem; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 6px;">
+                  <span style="color:#38bdf8;">✔</span> ${driver.title}
+                </div>
+                <div style="font-size: 0.78rem; color: #cbd5e1; margin-top: 4px; line-height: 1.45;">
+                  ${driver.detail}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <div style="font-size: 0.82rem; color: #cbd5e1;">
+              🎯 <strong>ターゲット購買層:</strong> <span style="color:#ffffff;">${deck.whyItSells.targetAudience}</span>
+            </div>
+            <div style="font-size: 0.82rem; color: #34d399; font-weight: 700;">
+              ⚡ <strong>売却スピード:</strong> ${deck.whyItSells.turnoverSpeed}
+            </div>
+          </div>
+        </div>
+
+        <!-- 📸 メルカリ出品用 商品販売イメージ画像 自動生成セクション -->
+        <div id="imageGeneratorSection" class="mockup-generator-box">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 style="font-size: 1.05rem; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 8px;">
+                📸 フリマ（メルカリ等）出品用メイン画像 自動ジェネレーター
+              </h3>
+              <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;">
+                プロ出品者のようなアイキャッチ帯・二重スリーブ・即対戦可能バッジ付き画像を瞬時に生成！そのまま出品画像として保存できます。
+              </div>
+            </div>
+            <button class="btn btn-primary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-size: 0.82rem; padding: 8px 16px;" onclick="downloadDeckMockupImage('${deck.id}')">
+              💾 出品用画像をダウンロード (PNG)
+            </button>
+          </div>
+
+          <div class="mockup-canvas-wrapper">
+            <canvas id="deckMockupCanvas" width="600" height="600" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.7);"></canvas>
+          </div>
+        </div>
+
+        <!-- 60枚デッキレシピ ＆ 仕入れ原価内訳明細 -->
+        <div>
+          <h3 style="font-size: 1.0rem; font-weight: 800; color: #ffffff; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+            📋 60枚レシピ ＆ パーツ仕入れ原価内訳 (仕入れ総額: <span style="color:#38bdf8;">${formatJpy(p.partsCostJpy)}</span>)
+          </h3>
+          <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border-glass); border-radius: 10px;">
+            <table class="card-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr>
+                  <th>カード名</th>
+                  <th>枚数</th>
+                  <th>役割・戦術</th>
+                  <th>仕入れ原価目安</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${deck.deckList.map(item => `
+                  <tr>
+                    <td style="font-weight: 700; color: #ffffff;">${item.name}</td>
+                    <td>${item.count}枚</td>
+                    <td style="color: #cbd5e1;">${item.role}</td>
+                    <td style="font-weight: 700; color: ${item.costJpy >= 500 ? '#f59e0b' : '#38bdf8'};">${formatJpy(item.costJpy)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- メルカリ出品用 タイトル・説明文 コピー枠 -->
+        <div class="mercari-copy-box">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-size: 0.88rem; font-weight: 700; color: #ef4444;">
+              🏷️ メルカリ出品用 タイトル・説明文テンプレート (コピペ用)
+            </div>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.74rem;" onclick="copyListingTemplate('${deck.id}')">
+              📋 一括コピーする
+            </button>
+          </div>
+          <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 6px;">タイトル:</div>
+          <input type="text" id="listingTitleInput" class="form-input" style="font-size: 0.8rem; padding: 6px 10px; margin-bottom: 8px;" value="${deck.listingTemplate.title}" readonly>
+          <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 6px;">商品説明文:</div>
+          <textarea id="listingDescInput" class="copy-text-area" rows="6" readonly>${deck.listingTemplate.description}</textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <button class="btn btn-primary" onclick="closeModal()">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Canvas に出品モックアップ画像を描画
+  setTimeout(() => {
+    drawDeckMockupCanvas(deck);
+    if (scrollToGenerator) {
+      const el = document.getElementById('imageGeneratorSection');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, 60);
+};
+
+/**
+ * メルカリ出品用モックアップ画像をCanvasで自動生成
+ */
+function drawDeckMockupCanvas(deck) {
+  const canvas = document.getElementById('deckMockupCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // 1. 背景グラデーション (高級感のあるダークゲーミングプレイマット風)
+  const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+  bgGrad.addColorStop(0, '#090d16');
+  bgGrad.addColorStop(0.5, '#131d33');
+  bgGrad.addColorStop(1, '#0b0f19');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  // 背景のグリッド・ハニカムパターン
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < w; x += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+  for (let y = 0; y < h; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  // 2. 上部ヘッダーバナー帯 (メルカリのアイキャッチ)
+  const topGrad = ctx.createLinearGradient(0, 0, w, 0);
+  topGrad.addColorStop(0, '#ef4444');
+  topGrad.addColorStop(0.5, '#dc2626');
+  topGrad.addColorStop(1, '#991b1b');
+  ctx.fillStyle = topGrad;
+  ctx.fillRect(0, 0, w, 68);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 26px "Noto Sans JP", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`🏆【${deck.tournamentAchievement.split('/')[0].trim()}】優勝構築！`, w / 2, 44);
+
+  // 3. サブタイトル帯
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  ctx.fillRect(0, 68, w, 40);
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 18px "Noto Sans JP", sans-serif';
+  ctx.fillText('⚡ 60枚ガチ構築・新品二重スリーブ付き・即対戦可能 ⚡', w / 2, 94);
+
+  // 4. メインカードプレビュー（3枚の象徴的カードを扇状/整列配置）
+  const cards = deck.featuredCards || [];
+  const cardW = 160;
+  const cardH = 224;
+  const startX = 65;
+  const cardY = 160;
+
+  cards.forEach((c, i) => {
+    const cx = startX + i * 165;
+    
+    // スリーブ外枠
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = i === 0 ? '#38bdf8' : (i === 1 ? '#a855f7' : '#f59e0b');
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(cx, cardY, cardW, cardH, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    // カード内部グラデーション（ホログラムアート風）
+    const cardGrad = ctx.createLinearGradient(cx, cardY, cx + cardW, cardY + cardH);
+    cardGrad.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+    cardGrad.addColorStop(0.5, 'rgba(168, 85, 247, 0.25)');
+    cardGrad.addColorStop(1, 'rgba(16, 185, 129, 0.2)');
+    ctx.fillStyle = cardGrad;
+    ctx.beginPath();
+    ctx.roundRect(cx + 8, cardY + 8, cardW - 16, cardH - 16, 6);
+    ctx.fill();
+
+    // バッジ
+    ctx.fillStyle = i === 0 ? '#38bdf8' : (i === 1 ? '#a855f7' : '#f59e0b');
+    ctx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(c.badge, cx + 16, cardY + 30);
+
+    // カード名
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px "Noto Sans JP", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(c.name, cx + cardW / 2, cardY + 110);
+
+    // 役割
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '13px "Noto Sans JP", sans-serif';
+    ctx.fillText(c.role, cx + cardW / 2, cardY + 138);
+
+    // キラキラ感演出
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.beginPath();
+    ctx.arc(cx + cardW - 24, cardY + 24, 6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // 5. 下部 特徴・アピールバッジ群
+  const badgeY = 415;
+  ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(40, badgeY, w - 80, 105, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  // アピールポイントテキスト
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px "Noto Sans JP", sans-serif';
+  ctx.fillText('✔ 最新レギュレーション（F・G・Hマーク）完全対応', 65, badgeY + 32);
+  ctx.fillText('✔ 高額ACE SPEC採用済み・届いてすぐ大会出場OK', 65, badgeY + 62);
+  ctx.fillText('✔ 新品スリーブ二重装着 ＆ 折れ・濡れ対策・即日匿名配送', 65, badgeY + 92);
+
+  // 6. フッター価格帯 & 即購入OKバッジ
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, h - 60, w, 60);
+
+  ctx.fillStyle = '#34d399';
+  ctx.font = 'bold 22px "Noto Sans JP", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`特価 ¥${deck.pricing.recommendedSalePriceJpy.toLocaleString()} (送料無料)`, 30, h - 22);
+
+  // 即購入OKバッジ
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.roundRect(w - 180, h - 48, 150, 36, 6);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 16px "Noto Sans JP", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('即購入大歓迎！', w - 105, h - 24);
+}
+
+/**
+ * 出品モックアップ画像をPNGとしてダウンロード
+ */
+window.downloadDeckMockupImage = function(deckId) {
+  const canvas = document.getElementById('deckMockupCanvas');
+  if (!canvas) return;
+  const link = document.createElement('a');
+  link.download = `mercari_deck_${deckId}_mockup.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};
+
+/**
+ * 出品タイトル・本文を一括コピー
+ */
+window.copyListingTemplate = function(deckId) {
+  const title = document.getElementById('listingTitleInput').value;
+  const desc = document.getElementById('listingDescInput').value;
+  const text = `${title}\n\n${desc}`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ 出品用タイトルと説明文をクリップボードにコピーしました！そのままメルカリに貼り付けできます。');
+  }).catch(() => {
+    alert('コピーに失敗しました。手動でテキストを選択してコピーしてください。');
+  });
+};
 
 window.openCardDetailModal = function(cardId) {
   const card = state.cards.find(c => c.id === cardId);
@@ -809,7 +1308,7 @@ window.openCardDetailModal = function(cardId) {
   setTimeout(() => {
     renderDetailChart(card);
   }, 50);
-}
+};
 
 // モーダル内クイック素体価格再試算
 window.quickRecalcModal = function(cardId) {

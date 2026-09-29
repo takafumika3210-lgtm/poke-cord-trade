@@ -86,6 +86,9 @@
         <button id="tabPsaGrading" class="view-tab-btn">
           💎 ② PSA鑑定投資 (素体仕入れ ➔ PSA10/9化)
         </button>
+        <button id="tabTournamentDecks" class="view-tab-btn" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
+          🏆 ③ 優勝デッキ再現販売 (需要分析 & 出品画像生成)
+        </button>
       </div>
 
       <div style="font-size: 0.8rem; color: var(--text-muted);">
@@ -182,8 +185,8 @@
         </div>
       </div>
 
-      <!-- Table -->
-      <div class="table-container">
+      <!-- Table (シングルカード用) -->
+      <div id="cardTableContainer" class="table-container">
         <table class="card-table">
           <thead id="cardTableHead">
             <!-- JavaScriptで動的生成 -->
@@ -192,6 +195,33 @@
             <!-- JavaScriptで動的生成 -->
           </tbody>
         </table>
+      </div>
+
+      <!-- Tournament Deck View (大会優勝デッキ再現販売用) -->
+      <div id="deckViewContainer" class="deck-view-container" style="display: none; padding: 24px;">
+        <div class="deck-view-header">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4);">
+                🏆 2026年9月 最新公式大会優勝・上位シェア連動
+              </span>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+                ⚡ フリマ即売れ高回転モデル
+              </span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: #ffffff; margin-top: 6px;">
+              大会優勝デッキ 再現販売シミュレーター ＆ 需要分析
+            </h2>
+            <div style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 4px;">
+              「なぜ売れるか」の需要・環境シェアを徹底分析し、60枚パーツ仕入れ原価 vs メルカリ成約相場から利ざやを最大化。出品用メイン画像も自動生成可能！
+            </div>
+          </div>
+        </div>
+
+        <!-- デッキ一覧グリッド -->
+        <div id="deckGrid" class="deck-grid" style="margin-top: 20px;">
+          <!-- JavaScriptで動的生成 -->
+        </div>
       </div>
     </main>
 
