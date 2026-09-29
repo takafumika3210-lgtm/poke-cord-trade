@@ -47,8 +47,8 @@
 ## フェーズ12: GitHub Pages デプロイ設定 (進行中)
 - [x] `.github/workflows/deploy.yml` (GitHub Pages自動デプロイワークフロー) の作成
 - [x] `.gitignore` の整備
-- [ ] ユーザーによるGitHubリモートリポジトリの作成 ＆ push
-- [ ] GitHub Pagesの設定有効化 (GitHub Actions経由)
+- [x] リモートリポジトリ登録 & `main` ブランチへの push 完了 (`takafumika3210-lgtm/poke-cord-trade`)
+- [ ] GitHub Pagesの設定有効化 (Settings > Pages > Source を GitHub Actions に設定)
 
 ---
 
